@@ -14,7 +14,7 @@ import utils
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', default='ml-1m', help='Name of the dataset')
+    parser.add_argument('--dataset', default='Net-ease', help='Name of the dataset')
     parser.add_argument('--dataloader', default='ncf_default', help='Which data loader to use')
     parser.add_argument('--model', default='ncf', choices=utils.model_list(), help='Which model to use')
     parser.add_argument('--model-dir', default='base_model',
@@ -65,12 +65,18 @@ if __name__ == '__main__':
         pass
 
     print('Building the datasets...')
-    train_data, test_data, params.user_num, params.item_num, train_mat = data_loader.load_all(params)
+    # train_data, test_data, params.user_num, params.item_num, train_mat = data_loader.load_all(params)
+    x_train, x_test, y_train, y_test = data_loader.load_all(params)
 
     # construct the train and test datasets
-    train_dataset = data_loader.TrainSet(features=train_data, num_item=params.item_num, train_mat=train_mat,
-                                         num_ng=params.num_ng)
-    test_dataset = data_loader.TestSet(features=test_data, num_item=params.item_num, num_ng=0)
+    # train_dataset = data_loader.TrainSet(features=train_data, num_item=params.item_num, train_mat=train_mat,
+    #                                      num_ng=params.num_ng)
+    # test_dataset = data_loader.TestSet(features=test_data, num_item=params.item_num, num_ng=0)
+    # train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8)
+    # test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
+
+    train_dataset = data_loader.TrainSet(features=x_train, values=y_train)
+    test_dataset = data_loader.TestSet(features=x_test, values=y_test)
     train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8)
     test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
 

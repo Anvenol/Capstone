@@ -1,0 +1,9 @@
+{
+  "data_dir": "raw_data/Net-ease",
+  "creator_demographics": "creator_demographics.csv",
+  "creator_stats": "creator_stats.csv",
+  "impression_data": "impression_data.csv",
+  "mlog_demographics": "mlog_demographics.csv",
+  "mlog_stats": "mlog_stats.csv",
+  "user_demographics": "user_demographics.csv"
+}
