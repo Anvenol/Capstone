@@ -44,7 +44,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
 
     for epoch in trange(params.epochs):
         model.train()
-        train_loader.dataset.ng_sample()
+        # train_loader.dataset.ng_sample()
 
         for user, item, label in train_loader:
             user = user.to(params.device)
@@ -92,17 +92,27 @@ class Net(nn.Module):
         self.model = model
         self.GMF_model = GMF_model
         self.MLP_model = MLP_model
+        # self.custom_embedding1 = nn.Embedding(num_class, embed_size)
         factor_num = params.factor_num
         num_layers = params.num_layers
         user_num = params.user_num
-        item_num = params.item_num
+        mlog_num = params.mlog_num
+        province_num = params.province_num
+        gender_num = params.gender_num
 
-        self.embed_user_GMF = nn.Embedding(user_num, factor_num)
-        self.embed_item_GMF = nn.Embedding(item_num, factor_num)
-        self.embed_user_MLP = nn.Embedding(
+        self.user_embedding1 = nn.Embedding(user_num, 20)
+        self.user_embedding2 = nn.Embedding(province_num, 20)
+        self.user_embedding3 = nn.Embedding(gender_num, 20)
+        self.user_embedding4 = nn.Linear(4,20)
+        self.mlog_embedding1 = nn.Embedding(mlog_num, 20)
+        self.mlog_embedding2 = nn.Linear(9.20)
+
+        self.embed_user_GMF = nn.Linear(user_num, factor_num)
+        self.embed_item_GMF = nn.Linear(mlog_num, factor_num)
+        self.embed_user_MLP = nn.Linear(
             user_num, factor_num * (2 ** (num_layers - 1)))
-        self.embed_item_MLP = nn.Embedding(
-            item_num, factor_num * (2 ** (num_layers - 1)))
+        self.embed_item_MLP = nn.Linear(
+            mlog_num, factor_num * (2 ** (num_layers - 1)))
 
         MLP_modules = []
         for i in range(num_layers):
@@ -166,6 +176,11 @@ class Net(nn.Module):
             self.predict_layer.bias.data.copy_(0.5 * precit_bias)
 
     def forward(self, user, item):
+        # self.custom_embedding1(user[:, 5])
+        embed_userid = self.user_embedding1(user[0])
+        embed_province = self.user_embedding2(user)
+
+
         if not self.model == 'MLP':
             embed_user_GMF = self.embed_user_GMF(user)
             embed_item_GMF = self.embed_item_GMF(item)

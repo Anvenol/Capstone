@@ -24,12 +24,32 @@ def load_all(params):
     # user_demographics = user_demographics.get_chunk(1000)
     impression_data = impression_data.get_chunk(1000)
     ##########
+    '''处理性别'''
+    # user_demographics[user_demographics['gender'] == 'unknown'] = np.nan
+    # b=user_demographics['gender'].unique()
+    # a=user_demographics['gender'].value_counts().count()
     '''用sklearn来转换标注'''
-
     lbe_user = LabelEncoder()
     user_demographics[['userId']] = user_demographics[['userId']].apply(lambda x: lbe_user.fit_transform(x))
     lbe_mlog = LabelEncoder()
     mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe_mlog.fit_transform(x))
+
+    lbe = LabelEncoder()
+    user_demographics[['province', 'gender']] = user_demographics[['province', 'gender']].apply(lambda x: lbe.fit_transform(x))
+    user_demographics[['age', 'gender']] = user_demographics[['gender', 'age']]
+    user_demographics.rename(columns={'age': 'gender', 'gender':'age'},inplace=True)
+    user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:]-user_demographics.iloc[:, 3:].mean())/user_demographics.iloc[:, 3:].std()
+    print(user_demographics.head())
+
+    mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe.fit_transform(x))
+    mlog_stats.iloc[:, 1:] = (mlog_stats.iloc[:, 1:] - mlog_stats.iloc[:, 1:].mean()) / mlog_stats.iloc[:, 1:].std()
+    print(mlog_stats.head())
+
+    '''返还class数量'''
+    user_num = user_demographics['userId'].value_counts().count()
+    province_num = user_demographics['province'].value_counts().count()
+    gender_num = user_demographics['gender'].value_counts().count()
+    mlog_num = mlog_stats['mlogId'].value_counts().count()
 
     impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
@@ -37,6 +57,20 @@ def load_all(params):
     impression_data['userId'] = impression_data['userId'].apply(lambda x: user_demographics[user_demographics['userId'] == x].values.tolist()[0])
     impression_data['mlogId'] = impression_data['mlogId'].apply(lambda x: mlog_stats[mlog_stats['mlogId'] == x].values.tolist()[0])
     print(impression_data.head())
+
+    train_data = impression_data[["userId", "mlogId"]].values.tolist()
+    isclick = impression_data["isClick"].values.tolist()
+
+    x_train, x_test, y_train, y_test = train_test_split(train_data, isclick, test_size=0.33, random_state=42)
+
+    # print(x_train[:5])
+    # print(x_test[:5])
+    # print(y_train[:5])
+    # print(y_test[:5])
+    # print(len(x_train))
+    # print(len(x_test))
+    # print(len(y_train))
+    # print(len(y_test))
 
     '''循环'''
     # mlog_dic = {}
@@ -81,18 +115,6 @@ def load_all(params):
     #
     # mlog_array = mlog_stats.values
 
-    train_data = impression_data[["userId", "mlogId"]].values.tolist()
-    isclick = impression_data["isClick"].values.tolist()
-
-    x_train, x_test, y_train, y_test = train_test_split(train_data, isclick, test_size=0.33, random_state=42)
-    print(x_train[:5])
-    print(x_test[:5])
-    print(y_train[:5])
-    print(y_test[:5])
-    print(len(x_train))
-    print(len(x_test))
-    print(len(y_train))
-    print(len(y_test))
 
     # train_data[['userId']] = train_data[['userId']]
 
@@ -107,7 +129,7 @@ def load_all(params):
     # user_num = user_length
     # item_num = mlog_length
 
-    return x_train, x_test, y_train, y_test
+    return x_train, x_test, y_train, y_test, user_num, province_num, gender_num, mlog_num
 
 class TrainSet(data.Dataset):
     def __init__(self, features, values):

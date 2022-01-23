@@ -1,2 +1,7 @@
-a=[[1885748, 'he nan', 22.0, 'male', 21.0, 2.0, 6.0]]
-print(a[0])
+import pandas as pd
+import numpy as np
+
+
+df = pd.DataFrame(data=np.arange(20).reshape(5,4), columns=['a', 'b', 'c', 'd'])
+df.rename(columns={'a':"???"},inplace=True)
+print(df)

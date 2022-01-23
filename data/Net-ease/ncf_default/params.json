@@ -5,5 +5,7 @@
   "impression_data": "impression_data.csv",
   "mlog_demographics": "mlog_demographics.csv",
   "mlog_stats": "mlog_stats.csv",
-  "user_demographics": "user_demographics.csv"
+  "user_demographics": "user_demographics.csv",
+  "test_num_ng": 99,
+  "top_k": 10
 }
