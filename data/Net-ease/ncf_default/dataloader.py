@@ -49,7 +49,10 @@ def load_all(params):
     user_num = user_demographics['userId'].value_counts().count()
     province_num = user_demographics['province'].value_counts().count()
     gender_num = user_demographics['gender'].value_counts().count()
+    user_int_num = 4
+    mlog_int_num = 9
     mlog_num = mlog_stats['mlogId'].value_counts().count()
+
 
     impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
@@ -129,7 +132,7 @@ def load_all(params):
     # user_num = user_length
     # item_num = mlog_length
 
-    return x_train, x_test, y_train, y_test, user_num, province_num, gender_num, mlog_num
+    return x_train, x_test, y_train, y_test, user_num, province_num, gender_num, mlog_num, user_int_num, mlog_int_num
 
 class TrainSet(data.Dataset):
     def __init__(self, features, values):
