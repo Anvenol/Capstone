@@ -74,10 +74,12 @@ if __name__ == '__main__':
     # train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8)
     # test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
 
-    x_train, x_test, y_train, y_test, params.user_num, params.province_num, params.gender_num, params.mlog_num, params.user_int_num, params.mlog_int_num = data_loader.load_all(params)
+    all_data, isclick, x_train, x_test, y_train, y_test, params.user_num, params.province_num, params.gender_num, \
+    params.mlog_num, params.user_int_num, params.mlog_int_num = data_loader.load_all(params)
 
     train_dataset = data_loader.TrainSet(features=x_train, values=y_train)
-    test_dataset = data_loader.TestSet(features=x_test, values=y_test)
+    test_dataset = data_loader.TestSet(features=x_test, values=y_test, features_all=all_data, values_all=isclick,
+                                       user_num=params.user_num, mlog_num=params.mlog_num)
     train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8)
     test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
 
