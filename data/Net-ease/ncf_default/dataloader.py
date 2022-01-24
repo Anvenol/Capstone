@@ -63,7 +63,7 @@ def load_all(params):
     print('user_data: ', type(all_user_data))
     print('item data: ', type(all_item_data))
     all_user_data = all_user_data.values
-    all_user_item = all_user_item.values
+    all_item_data = all_item_data.values
     print('user_data: ', all_user_data.values.shape)
     print('item data: ', all_item_data.shape)
     isclick = impression_data["isClick"].values.tolist()
