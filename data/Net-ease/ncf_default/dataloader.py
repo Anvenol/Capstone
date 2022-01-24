@@ -175,9 +175,8 @@ class TestSet(data.Dataset):
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
         """
-        self.user_features = user_features
-        self.item_features = item_features
-        self.values = values
+        self.user_features = user_features[values == 1]
+        self.item_features = item_features[values == 1]
 
         self.train_mat = sp.dok_matrix((user_num, mlog_num), dtype=np.float32)
         values_all = np.array(values_all)
@@ -187,22 +186,22 @@ class TestSet(data.Dataset):
             self.train_mat[user_true[i], item_true[i]] = 1
 
     def __len__(self):
-        return len(self.values)
+        return (self.num_ng + 1) * len(self.features_ps)
 
-    #     def ng_sample(self):
-    #         self.features_ng = []
-    #         for x in self.features_ps:
-    #             u = x[0]
-    #             for t in range(self.num_ng):
-    #                 j = np.random.randint(self.num_item)
-    #                 while (u, j) in self.train_mat:
-    #                     j = np.random.randint(self.num_item)
-    #                 self.features_ng.append([u, j])
-    #
-    #         labels_ps = [1 for _ in range(len(self.features_ps))]
-    #         labels_ng = [0 for _ in range(len(self.features_ng))]
-    #         self.features_fill = self.features_ps + self.features_ng
-    #         self.labels_fill = labels_ps + labels_ng
+    def ng_sample(self):
+        self.features_ng = []
+        for x in self.features_ps:
+            u = x[0]
+            for t in range(self.num_ng):
+                j = np.random.randint(self.num_item)
+                while (u, j) in self.train_mat:
+                    j = np.random.randint(self.num_item)
+                self.features_ng.append([u, j])
+
+            labels_ps = [1 for _ in range(len(self.features_ps))]
+            labels_ng = [0 for _ in range(len(self.features_ng))]
+            self.features_fill = self.features_ps + self.features_ng
+            self.labels_fill = labels_ps + labels_ng
 
     def __getitem__(self, idx):
         user_cat = self.user_features[idx, :3].to(np.int)
