@@ -155,7 +155,7 @@ class TrainSet(data.Dataset):
         return user_cat, user_num, item_cat, item_num, label
 
 class TestSet(data.Dataset):
-    def __init__(self, features, values, all_features, all_values, user_num, mlog_num):
+    def __init__(self, features, values, features_all, values_all, user_num, mlog_num):
         super(TestSet, self).__init__()
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
