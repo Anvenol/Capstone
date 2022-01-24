@@ -64,6 +64,8 @@ def load_all(params):
 
     all_user_data = impression_data["userId"].values
     all_item_data= impression_data["mlogId"].values
+    print('user_data: ', all_user_data)
+    print('item data: ', all_item_data)
     isclick = impression_data["isClick"].values.tolist()
 
     x_train, x_test, y_train, y_test = train_test_split(all_data, isclick, test_size=0.33, random_state=42)
