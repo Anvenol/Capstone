@@ -60,9 +60,11 @@ def load_all(params):
     all_user_data = impression_data['userId'].apply(lambda x: user_demographics[user_demographics['userId'] == x].values)
     all_item_data = impression_data['mlogId'].apply(lambda x: mlog_stats[mlog_stats['mlogId'] == x].values)
 
-    print('user_data: ', all_user_data)
-    print('item data: ', all_item_data)
-    print('user_data: ', all_user_data.shape)
+    print('user_data: ', type(all_user_data))
+    print('item data: ', type(all_item_data))
+    all_user_data = all_user_data.values
+    all_user_item = all_user_item.values
+    print('user_data: ', all_user_data.values.shape)
     print('item data: ', all_item_data.shape)
     isclick = impression_data["isClick"].values.tolist()
 
