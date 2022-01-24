@@ -166,8 +166,8 @@ class TestSet(data.Dataset):
 
         features_all = np.array(features_all)
         values_all = np.array(values_all)
-        print('features_all: ', features_all)
-        print('values_all: ', values_all)
+        print('features_all: ', features_all.shape)
+        print('values_all: ', values_all.shape)
         for ind, row in tqdm(values_all):
             train_mat[user_dic[row['userId']], mlog_dic[row['mlogId']]] = row['isClick']
 
