@@ -147,8 +147,8 @@ class TrainSet(data.Dataset):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        user = self.features[idx][0]
-        item = self.features[idx][1]
+        user = np.array(self.features[idx][0])
+        item = np.array(self.features[idx][1])
         label = self.labels[idx]
         return user, item, label
 
