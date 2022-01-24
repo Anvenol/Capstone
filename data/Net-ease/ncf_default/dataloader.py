@@ -164,6 +164,7 @@ class TestSet(data.Dataset):
         self.values = values
         train_mat = sp.dok_matrix((user_num, mlog_num), dtype=np.float32)
 
+        print('features_all: ', features_all)
         print('values_all: ', values_all)
         for ind, row in tqdm(values_all):
             train_mat[user_dic[row['userId']], mlog_dic[row['mlogId']]] = row['isClick']
