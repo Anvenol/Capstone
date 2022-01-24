@@ -9,7 +9,9 @@ import time
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from numba import jit
+
 pd.set_option('display.max_columns', None)
+
 
 def load_all(params):
     """ We load all the three file here to save time in each epoch. """
@@ -35,10 +37,12 @@ def load_all(params):
     mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe_mlog.fit_transform(x))
 
     lbe = LabelEncoder()
-    user_demographics[['province', 'gender']] = user_demographics[['province', 'gender']].apply(lambda x: lbe.fit_transform(x))
+    user_demographics[['province', 'gender']] = user_demographics[['province', 'gender']].apply(
+        lambda x: lbe.fit_transform(x))
     user_demographics[['age', 'gender']] = user_demographics[['gender', 'age']]
-    user_demographics.rename(columns={'age': 'gender', 'gender':'age'},inplace=True)
-    user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:]-user_demographics.iloc[:, 3:].mean())/user_demographics.iloc[:, 3:].std()
+    user_demographics.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
+    user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:] - user_demographics.iloc[:,
+                                                                     3:].mean()) / user_demographics.iloc[:, 3:].std()
     print(user_demographics.head())
 
     mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe.fit_transform(x))
@@ -53,25 +57,20 @@ def load_all(params):
     mlog_int_num = 9
     mlog_num = mlog_stats['mlogId'].value_counts().count()
 
-
     impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
 
-    all_user_data = impression_data['userId'].apply(lambda x: user_demographics[user_demographics['userId'] == x].values[0])
+    all_user_data = impression_data['userId'].apply(
+        lambda x: user_demographics[user_demographics['userId'] == x].values[0])
     all_item_data = impression_data['mlogId'].apply(lambda x: mlog_stats[mlog_stats['mlogId'] == x].values[0])
 
-    print('user_data: ', type(all_user_data))
-    print('item data: ', type(all_item_data))
     all_user_data = np.stack(all_user_data.values)
     all_item_data = np.stack(all_item_data.values)
-    print('user_data: ', all_user_data[0])
-    print('user_data type: ', type(all_user_data[0]))
-    print('user_data: ', all_user_data.shape)
-    print('item data: ', all_item_data.shape)
     isclick = impression_data["isClick"].values.tolist()
 
-    x_train, x_test, y_train, y_test = train_test_split(all_user_data, all_item_data, isclick,
-                                                        test_size=0.33, random_state=42)
+    user_train, user_test, item_train, item_test, y_train, y_test = train_test_split(all_user_data, all_item_data,
+                                                                                     isclick, test_size=0.33,
+                                                                                     random_state=42)
 
     # print(x_train[:5])
     # print(x_test[:5])
@@ -125,7 +124,6 @@ def load_all(params):
     #
     # mlog_array = mlog_stats.values
 
-
     # train_data[['userId']] = train_data[['userId']]
 
     # train_mat = sp.dok_matrix((user_length, mlog_length), dtype=np.float32)
@@ -138,48 +136,55 @@ def load_all(params):
 
     # user_num = user_length
     # item_num = mlog_length
+    params.user_num = user_num
+    params.province_num = province_num
+    params.gender_num = gender_num
+    params.mlog_num = mlog_num
+    params.user_int_num = user_int_num
+    params.mlog_int_num = mlog_int_num
+    return all_user_data, all_item_data, isclick, user_train, user_test, item_train, item_test, \
+           y_train, y_test, params
 
-    return all_data, isclick, x_train, x_test, y_train, y_test, user_num, province_num, gender_num, mlog_num, user_int_num, mlog_int_num
 
 class TrainSet(data.Dataset):
-    def __init__(self, features, values):
+    def __init__(self, user_features, item_features, values):
         super(TrainSet, self).__init__()
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
         """
-        self.features = features
+        self.user_features = user_features
+        self.item_features = item_features
         self.labels = values
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        user_cat = np.array(self.features[idx][0][:3], dtype='int')
-        user_num = np.array(self.features[idx][0][3:], dtype='float32')
-        item_cat = np.array(self.features[idx][1][0], dtype='int')
-        item_num = np.array(self.features[idx][1][1:], dtype='float32')
+        user_cat = self.user_features[idx, :3].to(np.int)
+        user_num = self.user_features[idx, 3:].to(np.float32)
+        item_cat = self.item_features[idx, 0].to(np.int)
+        item_num = self.item_features[idx, 1:].to(np.float32)
         label = self.labels[idx]
         return user_cat, user_num, item_cat, item_num, label
 
+
 class TestSet(data.Dataset):
-    def __init__(self, features, values, features_all, values_all, user_num, mlog_num):
+    def __init__(self, user_features, item_features, values, user_features_all,
+                 item_features_all, values_all, user_num, mlog_num):
         super(TestSet, self).__init__()
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
         """
-        self.features = features
+        self.user_features = user_features
+        self.item_features = item_features
         self.values = values
-        train_mat = sp.dok_matrix((user_num, mlog_num), dtype=np.float32)
 
-        features_all = np.array(features_all)
-        print('features_all: ', features_all)
+        self.train_mat = sp.dok_matrix((user_num, mlog_num), dtype=np.float32)
         values_all = np.array(values_all)
-        features_true = features_all[values_all == 1]
-        for ind, row in tqdm(values_all):
-            train_mat[user_dic[row['userId']], mlog_dic[row['mlogId']]] = row['isClick']
-
-        # for x in tqdm(train_data.values):
-        #     train_mat[user_dic[x[2]], mlog_dic[x[1]]] = x[0]
+        user_true = user_features_all[values_all == 1][:, 0]
+        item_true = item_features_all[values_all == 1][:, 0]
+        for i in tqdm(user_true.shape[0]):
+            self.train_mat[user_true[i], item_true[i]] = 1
 
     def __len__(self):
         return len(self.values)
@@ -200,10 +205,10 @@ class TestSet(data.Dataset):
     #         self.labels_fill = labels_ps + labels_ng
 
     def __getitem__(self, idx):
-        user_cat = np.array(self.features[idx][0][:3], dtype='int')
-        user_num = np.array(self.features[idx][0][3:], dtype='float32')
-        item_cat = np.array(self.features[idx][1][0], dtype='int')
-        item_num = np.array(self.features[idx][1][1:], dtype='float32')
+        user_cat = self.user_features[idx, :3].to(np.int)
+        user_num = self.user_features[idx, 3:].to(np.float32)
+        item_cat = self.item_features[idx, 0].to(np.int)
+        item_num = self.item_features[idx, 1:].to(np.float32)
         return user_cat, user_num, item_cat, item_num
 
 # class TrainSet(data.Dataset):

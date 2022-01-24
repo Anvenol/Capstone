@@ -73,12 +73,11 @@ if __name__ == '__main__':
     # test_dataset = data_loader.TestSet(features=test_data, num_item=params.item_num, num_ng=0)
     # train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8)
     # test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
+    all_user_data, all_item_data, isclick, user_train, user_test, item_train, item_test, \
+    y_train, y_test, params = data_loader.load_all(params)
 
-    all_data, isclick, x_train, x_test, y_train, y_test, params.user_num, params.province_num, params.gender_num, \
-    params.mlog_num, params.user_int_num, params.mlog_int_num = data_loader.load_all(params)
-
-    train_dataset = data_loader.TrainSet(features=x_train, values=y_train)
-    test_dataset = data_loader.TestSet(features=x_test, values=y_test, features_all=all_data, values_all=isclick,
+    train_dataset = data_loader.TrainSet(user_train, item_train, isclick)
+    test_dataset = data_loader.TestSet(user_test, item_test, all_user_data, all_item_data, isclick,
                                        user_num=params.user_num, mlog_num=params.mlog_num)
     train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8)
     test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
