@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import torch.utils.data as data
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from collections import defaultdict
 import time
 from sklearn.preprocessing import LabelEncoder
@@ -182,7 +182,7 @@ class TestSet(data.Dataset):
         values_all = np.array(values_all)
         user_true = user_features_all[values_all == 1][:, 0]
         item_true = item_features_all[values_all == 1][:, 0]
-        for i in tqdm(user_true.shape[0]):
+        for i in trange(user_true.shape[0]):
             self.train_mat[user_true[i], item_true[i]] = 1
 
     def __len__(self):
