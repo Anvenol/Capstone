@@ -160,10 +160,10 @@ class TrainSet(data.Dataset):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        user_cat = self.user_features[idx, :3].to(np.int)
-        user_num = self.user_features[idx, 3:].to(np.float32)
-        item_cat = self.item_features[idx, 0].to(np.int)
-        item_num = self.item_features[idx, 1:].to(np.float32)
+        user_cat = self.user_features[idx, :3].astype(int)
+        user_num = self.user_features[idx, 3:].astype(np.float32)
+        item_cat = self.item_features[idx, 0].astype(int)
+        item_num = self.item_features[idx, 1:].astype(np.float32)
         label = self.labels[idx]
         return user_cat, user_num, item_cat, item_num, label
 
@@ -204,10 +204,10 @@ class TestSet(data.Dataset):
             self.labels_fill = labels_ps + labels_ng
 
     def __getitem__(self, idx):
-        user_cat = self.user_features[idx, :3].to(np.int)
-        user_num = self.user_features[idx, 3:].to(np.float32)
-        item_cat = self.item_features[idx, 0].to(np.int)
-        item_num = self.item_features[idx, 1:].to(np.float32)
+        user_cat = self.user_features[idx, :3].astype(int)
+        user_num = self.user_features[idx, 3:].astype(np.float32)
+        item_cat = self.item_features[idx, 0].astype(int)
+        item_num = self.item_features[idx, 1:].astype(np.float32)
         return user_cat, user_num, item_cat, item_num
 
 # class TrainSet(data.Dataset):
