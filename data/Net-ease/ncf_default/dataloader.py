@@ -59,9 +59,11 @@ def load_all(params):
 
     impression_data['userId'] = impression_data['userId'].apply(lambda x: user_demographics[user_demographics['userId'] == x].values.tolist()[0])
     impression_data['mlogId'] = impression_data['mlogId'].apply(lambda x: mlog_stats[mlog_stats['mlogId'] == x].values.tolist()[0])
-    print(impression_data.head())
+    print('IMPRESSION DATA HERE: ', impression_data.head())
 
-    all_data = impression_data[["userId", "mlogId"]].values
+
+    all_user_data = impression_data["userId"].values
+    all_item_data= impression_data["mlogId"].values
     isclick = impression_data["isClick"].values.tolist()
 
     x_train, x_test, y_train, y_test = train_test_split(all_data, isclick, test_size=0.33, random_state=42)
