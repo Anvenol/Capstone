@@ -62,8 +62,8 @@ def load_all(params):
 
     print('user_data: ', type(all_user_data))
     print('item data: ', type(all_item_data))
-    all_user_data = all_user_data.values
-    all_item_data = all_item_data.values
+    all_user_data = np.stack(all_user_data.values)
+    all_item_data = np.stack(all_item_data.values)
     print('user_data: ', all_user_data[0])
     print('user_data type: ', type(all_user_data[0]))
     print('user_data: ', all_user_data.shape)
