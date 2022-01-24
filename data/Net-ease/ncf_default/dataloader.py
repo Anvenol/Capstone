@@ -57,20 +57,21 @@ def load_all(params):
     impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
 
-    impression_data['userId'] = impression_data['userId'].apply(lambda x: user_demographics[user_demographics['userId'] == x].values.tolist()[0])
-    impression_data['mlogId'] = impression_data['mlogId'].apply(lambda x: mlog_stats[mlog_stats['mlogId'] == x].values.tolist()[0])
+    impression_data['userId'] = impression_data['userId'].apply(lambda x: user_demographics[user_demographics['userId'] == x].values)
+    impression_data['mlogId'] = impression_data['mlogId'].apply(lambda x: mlog_stats[mlog_stats['mlogId'] == x].values)
     print('IMPRESSION DATA HERE: ', impression_data.head())
 
 
     all_user_data = impression_data["userId"].values
     all_item_data= impression_data["mlogId"].values
-    print('user_data: ', all_user_data)
-    print('item data: ', all_item_data)
+    # print('user_data: ', all_user_data)
+    #print('item data: ', all_item_data)
     print('user_data: ', all_user_data.shape)
     print('item data: ', all_item_data.shape)
     isclick = impression_data["isClick"].values.tolist()
 
-    x_train, x_test, y_train, y_test = train_test_split(all_data, isclick, test_size=0.33, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(all_user_data, all_item_data, isclick,
+                                                        test_size=0.33, random_state=42)
 
     # print(x_train[:5])
     # print(x_test[:5])
