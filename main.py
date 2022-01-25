@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     train_dataset = data_loader.TrainSet(user_train, item_train, y_train)
     test_dataset = data_loader.TestSet(user_test, item_test, y_test, all_user_data, all_item_data, isclick,
-                                       user_num=params.user_num, mlog_num=params.mlog_num)
+                                       user_num=params.user_num, mlog_num=params.mlog_num, test_ng=params.test_num_ng)
     train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8)
     test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
 

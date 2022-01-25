@@ -170,7 +170,7 @@ class TrainSet(data.Dataset):
 
 class TestSet(data.Dataset):
     def __init__(self, user_features, item_features, values, user_features_all,
-                 item_features_all, values_all, user_num, mlog_num):
+                 item_features_all, values_all, user_num, mlog_num, test_ng):
         super(TestSet, self).__init__()
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
@@ -182,32 +182,40 @@ class TestSet(data.Dataset):
         values_all = np.array(values_all)
         user_true = user_features_all[values_all == 1][:, 0]
         item_true = item_features_all[values_all == 1][:, 0]
-        for i in trange(user_true.shape[0]):
+        for i in range(user_true.shape[0]):
             self.train_mat[user_true[i], item_true[i]] = 1
 
+        self.mlog_num = mlog_num
+        self.test_ng = test_ng
+
     def __len__(self):
-        return (self.num_ng + 1) * len(self.features_ps)
+        return (self.test_ng + 1) * len(self.user_features)
 
     def ng_sample(self):
-        self.features_ng = []
-        for x in self.features_ps:
-            u = x[0]
-            for t in range(self.num_ng):
-                j = np.random.randint(self.num_item)
-                while (u, j) in self.train_mat:
-                    j = np.random.randint(self.num_item)
-                self.features_ng.append([u, j])
+        self.user_fill = []
+        self.item_fill = []
+        self.labels_fill = []
+        for x in range(len(self.user_features)):
+            self.user_ng = []
+            self.item_ng = []
+            for t in range(self.test_ng):
+                j = np.random.randint(len(self.mlog_num))
+                while (self.user_features[x], self.item_features[j]) in self.train_mat:
+                    j = np.random.randint(len(self.mlog_num))
+                self.user_ng.append(self.user_features[x])
+                self.item_ng.append(self.item_features[j])
 
-            labels_ps = [1 for _ in range(len(self.features_ps))]
-            labels_ng = [0 for _ in range(len(self.features_ng))]
-            self.features_fill = self.features_ps + self.features_ng
-            self.labels_fill = labels_ps + labels_ng
+            labels_ps = [1]
+            labels_ng = [0 for _ in range(self.test_ng)]
+            self.user_fill += self.user_features[x] + self.user_ng
+            self.item_fill += self.item_features[x] + self.item_ng
+            self.labels_fill += labels_ps + labels_ng
 
     def __getitem__(self, idx):
-        user_cat = self.user_features[idx, :3].astype(int)
-        user_num = self.user_features[idx, 3:].astype(np.float32)
-        item_cat = self.item_features[idx, 0].astype(int)
-        item_num = self.item_features[idx, 1:].astype(np.float32)
+        user_cat = self.user_fill[idx, :3].astype(int)
+        user_num = self.user_fill[idx, 3:].astype(np.float32)
+        item_cat = self.item_fill[idx, 0].astype(int)
+        item_num = self.item_fill[idx, 1:].astype(np.float32)
         return user_cat, user_num, item_cat, item_num
 
 # class TrainSet(data.Dataset):
