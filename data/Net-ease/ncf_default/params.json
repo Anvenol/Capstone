@@ -1,5 +1,5 @@
 {
-  "data_dir": "../../gdrive/MyDrive/MEng-Capstone-NetEase/csv_data",
+  "data_dir": "raw_data/Net-ease",
   "creator_demographics": "creator_demographics.csv",
   "creator_stats": "creator_stats.csv",
   "impression_data": "impression_data.csv",

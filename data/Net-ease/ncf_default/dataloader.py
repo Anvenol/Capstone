@@ -59,6 +59,7 @@ def load_all(params):
 
     impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
+    impression_data['isClick'].fillna(0)
 
     all_user_data = impression_data['userId'].apply(
         lambda x: user_demographics[user_demographics['userId'] == x].values[0])
@@ -81,61 +82,6 @@ def load_all(params):
     # print(len(y_train))
     # print(len(y_test))
 
-    '''循环'''
-    # mlog_dic = {}
-    # user_dic = defaultdict(int)
-    # mlog_length = len(mlog_stats)
-    # user_length = len(user_demographics['userId'])
-    #
-    # start = time.time()
-    # end = time.time()
-    # print("Running time: %s seconds" % (end - start))
-    #
-    # for ind, row in tqdm(user_demographics.iterrows()):
-    #     user_dic[row['userId']] = ind
-    #
-    # for ind, row in tqdm(mlog_stats.iterrows()):
-    #     mlog_dic[row['mlogId']] = ind
-
-    # mlog_stats_numpy_array = mlog_stats.values
-    # user_demographics_numpy_array = user_demographics.values
-
-    # @jit(nopython=True)
-    # def generate_for_loop(mlog_stats,user_demographics,mlog_length,user_length):
-    #     mlog_dic = {}
-    #     user_dic = {}
-    #
-    #     for i in range(mlog_length):
-    #         mlog_dic[mlog_stats[i][0]] = i
-    #     for i in range(user_length):
-    #         user_dic[user_demographics[i][0]] = i
-    #
-    #     return mlog_dic, user_dic
-    #
-    # mlog_dic,user_dic = generate_for_loop(mlog_stats_numpy_array,user_demographics_numpy_array,mlog_length,user_length)
-
-    # for i in range(mlog_length):
-    #     mlog_dic[mlog_stats.loc[i][0]] = i
-    # for i in range(user_length):
-    #     user_dic[user_demographics.loc[i][0]] = i
-    ''''''
-
-    # user_array = user_demographics.values
-    #
-    # mlog_array = mlog_stats.values
-
-    # train_data[['userId']] = train_data[['userId']]
-
-    # train_mat = sp.dok_matrix((user_length, mlog_length), dtype=np.float32)
-
-    # for ind, row in tqdm(train_data.iterrows()):
-    #     train_mat[user_dic[row['userId']], mlog_dic[row['mlogId']]] = row['isClick']
-
-    # for x in tqdm(train_data.values):
-    #     train_mat[user_dic[x[2]], mlog_dic[x[1]]] = x[0]
-
-    # user_num = user_length
-    # item_num = mlog_length
     params.user_num = user_num
     params.province_num = province_num
     params.gender_num = gender_num
@@ -175,9 +121,8 @@ class TestSet(data.Dataset):
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
         """
-        self.user_features = user_features[values == 1]
-        self.item_features = item_features[values == 1]
-
+        self.user_features = user_features[values == 1][:,0]
+        self.item_features = item_features[values == 1][:,0]
         self.train_mat = sp.dok_matrix((user_num, mlog_num), dtype=np.float32)
         values_all = np.array(values_all)
         user_true = user_features_all[values_all == 1][:, 0]
@@ -187,28 +132,29 @@ class TestSet(data.Dataset):
 
         self.mlog_num = mlog_num
         self.test_ng = test_ng
+        self.item_id_all = item_features_all[:,0]
 
     def __len__(self):
-        return (self.test_ng + 1) * len(self.user_features)
+        return (self.test_ng + 1) * self.user_features.shape[0]
 
     def ng_sample(self):
         self.user_fill = []
         self.item_fill = []
         self.labels_fill = []
-        for x in range(len(self.user_features)):
+        for x in range(self.user_features.shape[0]):
             self.user_ng = []
             self.item_ng = []
             for t in range(self.test_ng):
-                j = np.random.randint(len(self.mlog_num))
-                while (self.user_features[x], self.item_features[j]) in self.train_mat:
-                    j = np.random.randint(len(self.mlog_num))
-                self.user_ng.append(self.user_features[x])
-                self.item_ng.append(self.item_features[j])
+                j = np.random.randint(self.item_id_all.shape[0])
+                while (self.user_features[x], self.item_id_all[j]) in self.train_mat:
+                    j = np.random.randint(self.item_id_all.shape[0])
+                self.user_ng.append(self.user_features[0][x])
+                self.item_ng.append(self.item_features[0][j])
 
             labels_ps = [1]
             labels_ng = [0 for _ in range(self.test_ng)]
-            self.user_fill += self.user_features[x] + self.user_ng
-            self.item_fill += self.item_features[x] + self.item_ng
+            self.user_fill += self.user_features[0][x] + self.user_ng
+            self.item_fill += self.item_features[0][x] + self.item_ng
             self.labels_fill += labels_ps + labels_ng
 
     def __getitem__(self, idx):
@@ -216,6 +162,14 @@ class TestSet(data.Dataset):
         user_num = self.user_fill[idx, 3:].astype(np.float32)
         item_cat = self.item_fill[idx, 0].astype(int)
         item_num = self.item_fill[idx, 1:].astype(np.float32)
+        if user_num is None:
+            raise ValueError
+        if user_cat is None:
+            raise ValueError
+        if item_cat is None:
+            raise ValueError
+        if item_num is None:
+            raise ValueError
         return user_cat, user_num, item_cat, item_num
 
 # class TrainSet(data.Dataset):
