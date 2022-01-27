@@ -41,13 +41,15 @@ def load_all(params):
         lambda x: lbe.fit_transform(x))
     user_demographics[['age', 'gender']] = user_demographics[['gender', 'age']]
     user_demographics.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
+    user_demographics.fillna(user_demographics.mean(), inplace=True)
     user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:] - user_demographics.iloc[:,
                                                                      3:].mean()) / user_demographics.iloc[:, 3:].std()
-    print(user_demographics.head())
+    # print(user_demographics.head())
 
     mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe.fit_transform(x))
+    mlog_stats.iloc[:, 1:].fillna(mlog_stats.iloc[:, 1:].mean())
     mlog_stats.iloc[:, 1:] = (mlog_stats.iloc[:, 1:] - mlog_stats.iloc[:, 1:].mean()) / mlog_stats.iloc[:, 1:].std()
-    print(mlog_stats.head())
+    # print(mlog_stats.head())
 
     '''返还class数量'''
     user_num = user_demographics['userId'].value_counts().count()
@@ -121,8 +123,11 @@ class TestSet(data.Dataset):
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
         """
-        self.user_features = user_features[values == 1][:,0]
-        self.item_features = item_features[values == 1][:,0]
+        values = np.array(values)
+        self.user_features = user_features
+        self.item_features = item_features
+        self.user_positive_features = user_features[values == 1]
+        self.item_positive_features = item_features[values == 1]
         self.train_mat = sp.dok_matrix((user_num, mlog_num), dtype=np.float32)
         values_all = np.array(values_all)
         user_true = user_features_all[values_all == 1][:, 0]
@@ -132,44 +137,40 @@ class TestSet(data.Dataset):
 
         self.mlog_num = mlog_num
         self.test_ng = test_ng
-        self.item_id_all = item_features_all[:,0]
+        self.item_id_all = item_features_all
 
     def __len__(self):
         return (self.test_ng + 1) * self.user_features.shape[0]
 
     def ng_sample(self):
-        self.user_fill = []
-        self.item_fill = []
         self.labels_fill = []
-        for x in range(self.user_features.shape[0]):
+        for x in range(self.user_positive_features.shape[0]):
             self.user_ng = []
             self.item_ng = []
             for t in range(self.test_ng):
                 j = np.random.randint(self.item_id_all.shape[0])
-                while (self.user_features[x], self.item_id_all[j]) in self.train_mat:
+                while (self.user_positive_features[x,0], self.item_id_all[j,0]) in self.train_mat:
                     j = np.random.randint(self.item_id_all.shape[0])
-                self.user_ng.append(self.user_features[0][x])
-                self.item_ng.append(self.item_features[0][j])
+                self.user_ng.append(self.user_positive_features[x,:])
+                self.item_ng.append(self.item_id_all[j,:])
 
             labels_ps = [1]
             labels_ng = [0 for _ in range(self.test_ng)]
-            self.user_fill += self.user_features[0][x] + self.user_ng
-            self.item_fill += self.item_features[0][x] + self.item_ng
+            if x == 0:
+                self.user_fill = np.vstack((self.user_positive_features[x,:], np.stack(self.user_ng)))
+                self.item_fill = np.vstack((self.item_positive_features[x,:], np.stack(self.item_ng)))
+            else:
+                self.user_fill = np.vstack((self.user_fill, self.user_positive_features[x,:], np.stack(self.user_ng)))
+                self.item_fill = np.vstack((self.item_fill, self.item_positive_features[x,:], np.stack(self.item_ng)))
+
             self.labels_fill += labels_ps + labels_ng
+        print(self.user_fill)
 
     def __getitem__(self, idx):
         user_cat = self.user_fill[idx, :3].astype(int)
         user_num = self.user_fill[idx, 3:].astype(np.float32)
         item_cat = self.item_fill[idx, 0].astype(int)
         item_num = self.item_fill[idx, 1:].astype(np.float32)
-        if user_num is None:
-            raise ValueError
-        if user_cat is None:
-            raise ValueError
-        if item_cat is None:
-            raise ValueError
-        if item_num is None:
-            raise ValueError
         return user_cat, user_num, item_cat, item_num
 
 # class TrainSet(data.Dataset):
