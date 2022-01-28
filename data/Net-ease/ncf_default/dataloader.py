@@ -62,6 +62,7 @@ def load_all(params):
     impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
     impression_data['isClick'].fillna(0)
+    impression_data.dropna(axis=0, how='any', inplace=False)
 
     all_user_data = impression_data['userId'].apply(
         lambda x: user_demographics[user_demographics['userId'] == x].values[0])
