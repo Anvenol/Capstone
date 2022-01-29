@@ -193,10 +193,6 @@ class Net(nn.Module):
         for i in range(numerical_feature_start):
           embed_userid = self.user_embedding1(user_cat[:, i])
         """
-        print('user_cat: ', user_cat.shape)
-        print('user_num: ', user_num.shape)
-        print('item_cat: ', item_cat.shape)
-        print('item_num: ', item_num.shape)
         embed_userid = self.user_embedding1(user_cat[:, 0])
         embed_province = self.user_embedding2(user_cat[:, 1])
         embed_gender = self.user_embedding3(user_cat[:, 2])

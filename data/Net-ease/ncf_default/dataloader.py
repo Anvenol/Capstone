@@ -6,8 +6,9 @@ import torch.utils.data as data
 from tqdm import tqdm, trange
 from collections import defaultdict
 import time
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler, RobustScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
+
 from numba import jit
 
 pd.set_option('display.max_columns', None)
@@ -31,6 +32,7 @@ def load_all(params):
     # b=user_demographics['gender'].unique()
     # a=user_demographics['gender'].value_counts().count()
     '''用sklearn来转换标注'''
+
     lbe_user = LabelEncoder()
     user_demographics[['userId']] = user_demographics[['userId']].apply(lambda x: lbe_user.fit_transform(x))
     lbe_mlog = LabelEncoder()
@@ -42,14 +44,26 @@ def load_all(params):
     user_demographics[['age', 'gender']] = user_demographics[['gender', 'age']]
     user_demographics.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
     user_demographics.fillna(user_demographics.mean(), inplace=True)
-    user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:] - user_demographics.iloc[:,
-                                                                     3:].mean()) / user_demographics.iloc[:, 3:].std()
+    # user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:] - user_demographics.iloc[:,
+    #                                                                  3:].mean()) / user_demographics.iloc[:, 3:].std()
     # print(user_demographics.head())
 
     mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe.fit_transform(x))
     mlog_stats.iloc[:, 1:].fillna(mlog_stats.iloc[:, 1:].mean())
-    mlog_stats.iloc[:, 1:] = (mlog_stats.iloc[:, 1:] - mlog_stats.iloc[:, 1:].mean()) / mlog_stats.iloc[:, 1:].std()
-    # print(mlog_stats.head())
+    # mlog_stats.iloc[:, 1:] = (mlog_stats.iloc[:, 1:] - mlog_stats.iloc[:, 1:].mean()) / mlog_stats.iloc[:, 1:].std()
+
+    '''标准化'''
+    sc = StandardScaler()
+    user_demographics.iloc[:, [6]] = sc.fit_transform(user_demographics.iloc[:, [6]])
+    mlog_stats.iloc[:, [1]] = sc.fit_transform(mlog_stats.iloc[:, [1]])
+
+    mm = MinMaxScaler()
+    rs = RobustScaler()
+    user_demographics.iloc[:, [3,4,5]] = rs.fit_transform(user_demographics.iloc[:, [3,4,5]])
+    mlog_stats.iloc[:, 2:] = rs.fit_transform(mlog_stats.iloc[:, 2:])
+
+    print(user_demographics.max())
+    print(mlog_stats.max())
 
     '''返还class数量'''
     user_num = user_demographics['userId'].value_counts().count()
@@ -75,15 +89,6 @@ def load_all(params):
     user_train, user_test, item_train, item_test, y_train, y_test = train_test_split(all_user_data, all_item_data,
                                                                                      isclick, test_size=0.33,
                                                                                      random_state=42)
-
-    # print(x_train[:5])
-    # print(x_test[:5])
-    # print(y_train[:5])
-    # print(y_test[:5])
-    # print(len(x_train))
-    # print(len(x_test))
-    # print(len(y_train))
-    # print(len(y_test))
 
     params.user_num = user_num
     params.province_num = province_num
@@ -173,58 +178,3 @@ class TestSet(data.Dataset):
         item_cat = self.item_fill[idx, 0].astype(int)
         item_num = self.item_fill[idx, 1:].astype(np.float32)
         return user_cat, user_num, item_cat, item_num
-
-# class TrainSet(data.Dataset):
-#     def __init__(self, features, num_item, train_mat=None, num_ng=0):
-#         super(TrainSet, self).__init__()
-#         """ Note that the labels are only useful when training, we thus
-#             add them in the ng_sample() function.
-#         """
-#         self.features_ps = features
-#         self.num_item = num_item
-#         self.train_mat = train_mat
-#         self.num_ng = num_ng
-#         self.labels = [0 for _ in range(len(features))]
-#
-#     def ng_sample(self):
-#         self.features_ng = []
-#         for x in self.features_ps:
-#             u = x[0]
-#             for t in range(self.num_ng):
-#                 j = np.random.randint(self.num_item)
-#                 while (u, j) in self.train_mat:
-#                     j = np.random.randint(self.num_item)
-#                 self.features_ng.append([u, j])
-#
-#         labels_ps = [1 for _ in range(len(self.features_ps))]
-#         labels_ng = [0 for _ in range(len(self.features_ng))]
-#         self.features_fill = self.features_ps + self.features_ng
-#         self.labels_fill = labels_ps + labels_ng
-#
-#     def __len__(self):
-#         return (self.num_ng + 1) * len(self.features_ps)
-#
-#     def __getitem__(self, idx):
-#         user = self.features_fill[idx][0]
-#         item = self.features_fill[idx][1]
-#         label = self.labels_fill[idx]
-#         return user, item, label
-
-
-# class TestSet(data.Dataset):
-#     def __init__(self, features, num_item, num_ng=0):
-#         super(TestSet, self).__init__()
-#         """ Note that the labels are only useful when training, we thus
-#             add them in the ng_sample() function.
-#         """
-#         self.features_ps = features
-#         self.num_item = num_item
-#         self.num_ng = num_ng
-#
-#     def __len__(self):
-#         return (self.num_ng + 1) * len(self.features_ps)
-#
-#     def __getitem__(self, idx):
-#         user = self.features_ps[idx][0]
-#         item = self.features_ps[idx][1]
-#         return user, item
