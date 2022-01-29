@@ -6,7 +6,7 @@ import torch.utils.data as data
 from tqdm import tqdm, trange
 from collections import defaultdict
 import time
-from sklearn.preprocessing import LabelEncoder, StandardScaler, RobustScaler, MinMaxScaler
+from sklearn.preprocessing import LabelEncoder, StandardScaler, RobustScaler, MinMaxScaler, MaxAbsScaler
 from sklearn.model_selection import train_test_split
 
 from numba import jit
@@ -53,17 +53,17 @@ def load_all(params):
     # mlog_stats.iloc[:, 1:] = (mlog_stats.iloc[:, 1:] - mlog_stats.iloc[:, 1:].mean()) / mlog_stats.iloc[:, 1:].std()
 
     '''标准化'''
-    sc = StandardScaler()
-    user_demographics.iloc[:, [6]] = sc.fit_transform(user_demographics.iloc[:, [6]])
-    mlog_stats.iloc[:, [1]] = sc.fit_transform(mlog_stats.iloc[:, [1]])
-
-    mm = MinMaxScaler()
-    rs = RobustScaler()
-    user_demographics.iloc[:, [3,4,5]] = rs.fit_transform(user_demographics.iloc[:, [3,4,5]])
-    mlog_stats.iloc[:, 2:] = rs.fit_transform(mlog_stats.iloc[:, 2:])
-
-    print(user_demographics.max())
-    print(mlog_stats.max())
+    # sc = StandardScaler()
+    # user_demographics.iloc[:, [6]] = sc.fit_transform(user_demographics.iloc[:, [6]])
+    # mlog_stats.iloc[:, [1]] = sc.fit_transform(mlog_stats.iloc[:, [1]])
+    #
+    # mm = MinMaxScaler()
+    # rs = RobustScaler()
+    # user_demographics.iloc[:, [3,4,5]] = rs.fit_transform(user_demographics.iloc[:, [3,4,5]])
+    # mlog_stats.iloc[:, 2:] = rs.fit_transform(mlog_stats.iloc[:, 2:])
+    #
+    # print(user_demographics.max())
+    # print(mlog_stats.max())
 
     '''返还class数量'''
     user_num = user_demographics['userId'].value_counts().count()
@@ -89,6 +89,26 @@ def load_all(params):
     user_train, user_test, item_train, item_test, y_train, y_test = train_test_split(all_user_data, all_item_data,
                                                                                      isclick, test_size=0.33,
                                                                                      random_state=42)
+
+    '''标准化'''
+    sc = StandardScaler()
+    mm = MinMaxScaler()
+    rs = RobustScaler()
+    ma = MaxAbsScaler()
+    item_train[:, 1:] = ma.fit_transform(item_train[:, 1:])
+    item_test[:, 1:] = ma.transform(item_test[:, 1:])
+
+    user_train[:, 3:] = sc.fit_transform(user_train[:, 3:])
+    user_test[:, 3:] = sc.transform(user_test[:, 3:])
+
+    # user_demographics.iloc[:, [6]] = sc.fit_transform(user_demographics.iloc[:, [6]])
+    # mlog_stats.iloc[:, [1]] = sc.fit_transform(mlog_stats.iloc[:, [1]])
+
+    # user_demographics.iloc[:, [3,4,5]] = rs.fit_transform(user_demographics.iloc[:, [3,4,5]])
+    # mlog_stats.iloc[:, 2:] = rs.fit_transform(mlog_stats.iloc[:, 2:])
+    #
+    # print(user_demographics.max())
+    # print(mlog_stats.max())
 
     params.user_num = user_num
     params.province_num = province_num
