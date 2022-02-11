@@ -46,15 +46,15 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         model.train()
         test_loader.dataset.ng_sample()
 
-        for user_cat, user_num, item_num, label in train_loader:
+        for user_cat, user_num, item_cat, item_num, label in train_loader:
             user_cat = user_cat.to(params.device)
             user_num = user_num.to(params.device)
-            # item_cat = item_cat.to(params.device)
+            item_cat = item_cat.to(params.device)
             item_num = item_num.to(params.device)
             label = label.float().to(params.device)
 
             model.zero_grad()
-            prediction = model(user_cat, user_num, item_num)
+            prediction = model(user_cat, user_num, item_cat, item_num)
             loss = loss_fn(prediction, label)
             loss.backward()
             optimizer.step()
@@ -108,7 +108,7 @@ class Net(nn.Module):
         self.user_embedding2 = nn.Embedding(province_num, 10)
         self.user_embedding3 = nn.Embedding(gender_num, 10)
         self.user_embedding4 = nn.Linear(user_int_num,10)
-        # self.mlog_embedding1 = nn.Embedding(mlog_num, 10)
+        self.mlog_embedding1 = nn.Embedding(mlog_num, 10)
         self.mlog_embedding2 = nn.Linear(mlog_int_num,10)
 
         '''
@@ -120,11 +120,11 @@ class Net(nn.Module):
         '''
 
         self.embed_user_GMF = nn.Linear(30, factor_num)
-        self.embed_item_GMF = nn.Linear(10, factor_num)
+        self.embed_item_GMF = nn.Linear(20, factor_num)
         self.embed_user_MLP = nn.Linear(
             30, factor_num * (2 ** (num_layers - 1)))
         self.embed_item_MLP = nn.Linear(
-            10, factor_num * (2 ** (num_layers - 1)))
+            20, factor_num * (2 ** (num_layers - 1)))
 
         MLP_modules = []
         for i in range(num_layers):
@@ -187,7 +187,7 @@ class Net(nn.Module):
             self.predict_layer.weight.data.copy_(0.5 * predict_weight)
             self.predict_layer.bias.data.copy_(0.5 * precit_bias)
 
-    def forward(self, user_cat, user_num, item_num):
+    def forward(self, user_cat, user_num, item_cat, item_num):
         # self.custom_embedding1(user[:, 5])
         """
         for i in range(numerical_feature_start):
@@ -197,13 +197,11 @@ class Net(nn.Module):
         embed_province = self.user_embedding2(user_cat[:, 0])
         embed_gender = self.user_embedding3(user_cat[:, 1])
         embed_user_linear = self.user_embedding4(user_num)
-        # user = torch.cat((embed_userid, embed_province, embed_gender, embed_user_linear), dim=1)
-        user = torch.cat(( embed_province, embed_gender, embed_user_linear), dim=1)
+        user = torch.cat((embed_province, embed_gender, embed_user_linear), dim=1)
 
-        # embed_mlogid = self.mlog_embedding1(item_cat)
+        embed_mlogid = self.mlog_embedding1(item_cat)
         embed_mlog_linear = self.mlog_embedding2(item_num)
-        # item = torch.cat((embed_mlogid, embed_mlog_linear), dim=1)
-        item = embed_mlog_linear
+        item = torch.cat((embed_mlogid, embed_mlog_linear), dim=1)
 
         if not self.model == 'MLP':
             embed_user_GMF = self.embed_user_GMF(user)
