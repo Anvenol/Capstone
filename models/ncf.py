@@ -46,7 +46,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         model.train()
         test_loader.dataset.ng_sample()
 
-        for user_cat, user_num, item_cat, item_num, label in train_loader:
+        for user_cat, user_num, item_num, label in train_loader:
             user_cat = user_cat.to(params.device)
             user_num = user_num.to(params.device)
             # item_cat = item_cat.to(params.device)
