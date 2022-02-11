@@ -166,7 +166,7 @@ class TestSet(data.Dataset):
         self.item_id_all = item_features_all
 
     def __len__(self):
-        return (self.test_ng + 1) * self.user_features.shape[0]
+        return (self.test_ng + 1) * self.user_features.shape[0] - 1
 
     def ng_sample(self):
         self.labels_fill = []
@@ -190,7 +190,6 @@ class TestSet(data.Dataset):
                 self.item_fill = np.vstack((self.item_fill, self.item_positive_features[x,:], np.stack(self.item_ng)))
 
             self.labels_fill += labels_ps + labels_ng
-        print(self.user_fill)
 
     def __getitem__(self, idx):
         user_cat = self.user_fill[idx, :3].astype(int)
