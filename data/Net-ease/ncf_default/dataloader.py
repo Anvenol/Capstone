@@ -166,7 +166,7 @@ class TestSet(data.Dataset):
         self.item_id_all = item_features_all
 
     def __len__(self):
-        return (self.test_ng + 1) * self.user_features.shape[0] - 1
+        return (self.test_ng + 1) * self.user_positive_features.shape[0]
 
     def ng_sample(self):
         self.labels_fill = []
