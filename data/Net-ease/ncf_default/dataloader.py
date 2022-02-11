@@ -134,7 +134,7 @@ class TrainSet(data.Dataset):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        user_cat = self.user_features[idx, 1:3].astype(int)
+        user_cat = self.user_features[idx, :3].astype(int)
         user_num = self.user_features[idx, 3:].astype(np.float32)
         item_cat = self.item_features[idx, 0].astype(int)
         item_num = self.item_features[idx, 1:].astype(np.float32)
@@ -193,7 +193,7 @@ class TestSet(data.Dataset):
         print(self.user_fill)
 
     def __getitem__(self, idx):
-        user_cat = self.user_fill[idx, 1:3].astype(int)
+        user_cat = self.user_fill[idx, :3].astype(int)
         user_num = self.user_fill[idx, 3:].astype(np.float32)
         item_cat = self.item_fill[idx, 0].astype(int)
         item_num = self.item_fill[idx, 1:].astype(np.float32)
