@@ -104,11 +104,11 @@ class Net(nn.Module):
         user_int_num = params.user_int_num
         mlog_int_num = params.mlog_int_num
 
-        self.user_embedding1 = nn.Embedding(user_num, 10)
+        # self.user_embedding1 = nn.Embedding(user_num, 10)
         self.user_embedding2 = nn.Embedding(province_num, 10)
         self.user_embedding3 = nn.Embedding(gender_num, 10)
         self.user_embedding4 = nn.Linear(user_int_num,10)
-        self.mlog_embedding1 = nn.Embedding(mlog_num, 10)
+        # self.mlog_embedding1 = nn.Embedding(mlog_num, 10)
         self.mlog_embedding2 = nn.Linear(mlog_int_num,10)
 
         '''
@@ -119,12 +119,12 @@ class Net(nn.Module):
         # in forward: self.user_cats[0] to run the first embedding layer
         '''
 
-        self.embed_user_GMF = nn.Linear(40, factor_num)
-        self.embed_item_GMF = nn.Linear(20, factor_num)
+        self.embed_user_GMF = nn.Linear(30, factor_num)
+        self.embed_item_GMF = nn.Linear(10, factor_num)
         self.embed_user_MLP = nn.Linear(
-            40, factor_num * (2 ** (num_layers - 1)))
+            30, factor_num * (2 ** (num_layers - 1)))
         self.embed_item_MLP = nn.Linear(
-            20, factor_num * (2 ** (num_layers - 1)))
+            10, factor_num * (2 ** (num_layers - 1)))
 
         MLP_modules = []
         for i in range(num_layers):
@@ -193,15 +193,17 @@ class Net(nn.Module):
         for i in range(numerical_feature_start):
           embed_userid = self.user_embedding1(user_cat[:, i])
         """
-        embed_userid = self.user_embedding1(user_cat[:, 0])
-        embed_province = self.user_embedding2(user_cat[:, 1])
-        embed_gender = self.user_embedding3(user_cat[:, 2])
+        # embed_userid = self.user_embedding1(user_cat[:, 0])
+        embed_province = self.user_embedding2(user_cat[:, 0])
+        embed_gender = self.user_embedding3(user_cat[:, 1])
         embed_user_linear = self.user_embedding4(user_num)
-        user = torch.cat((embed_userid, embed_province, embed_gender, embed_user_linear), dim=1)
+        # user = torch.cat((embed_userid, embed_province, embed_gender, embed_user_linear), dim=1)
+        user = torch.cat(( embed_province, embed_gender, embed_user_linear), dim=1)
 
-        embed_mlogid = self.mlog_embedding1(item_cat)
+        # embed_mlogid = self.mlog_embedding1(item_cat)
         embed_mlog_linear = self.mlog_embedding2(item_num)
-        item = torch.cat((embed_mlogid, embed_mlog_linear), dim=1)
+        # item = torch.cat((embed_mlogid, embed_mlog_linear), dim=1)
+        item = embed_mlog_linear
 
         if not self.model == 'MLP':
             embed_user_GMF = self.embed_user_GMF(user)
