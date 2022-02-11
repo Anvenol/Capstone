@@ -49,12 +49,12 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         for user_cat, user_num, item_cat, item_num, label in train_loader:
             user_cat = user_cat.to(params.device)
             user_num = user_num.to(params.device)
-            item_cat = item_cat.to(params.device)
+            # item_cat = item_cat.to(params.device)
             item_num = item_num.to(params.device)
             label = label.float().to(params.device)
 
             model.zero_grad()
-            prediction = model(user_cat, user_num, item_cat, item_num)
+            prediction = model(user_cat, user_num, item_num)
             loss = loss_fn(prediction, label)
             loss.backward()
             optimizer.step()
@@ -187,7 +187,7 @@ class Net(nn.Module):
             self.predict_layer.weight.data.copy_(0.5 * predict_weight)
             self.predict_layer.bias.data.copy_(0.5 * precit_bias)
 
-    def forward(self, user_cat, user_num, item_cat, item_num):
+    def forward(self, user_cat, user_num, item_num):
         # self.custom_embedding1(user[:, 5])
         """
         for i in range(numerical_feature_start):

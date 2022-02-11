@@ -137,10 +137,9 @@ class TrainSet(data.Dataset):
         user_cat = self.user_features[idx, 1:3].astype(int)
         user_num = self.user_features[idx, 3:].astype(np.float32)
         # item_cat = self.item_features[idx, 0].astype(int)
-        item_cat = None
         item_num = self.item_features[idx, 1:].astype(np.float32)
         label = self.labels[idx]
-        return user_cat, user_num, item_cat, item_num, label
+        return user_cat, user_num, item_num, label
 
 
 class TestSet(data.Dataset):
@@ -197,6 +196,5 @@ class TestSet(data.Dataset):
         user_cat = self.user_fill[idx, 1:3].astype(int)
         user_num = self.user_fill[idx, 3:].astype(np.float32)
         # item_cat = self.item_fill[idx, 0].astype(int)
-        item_cat = None
         item_num = self.item_fill[idx, 1:].astype(np.float32)
-        return user_cat, user_num, item_cat, item_num
+        return user_cat, user_num, item_num
