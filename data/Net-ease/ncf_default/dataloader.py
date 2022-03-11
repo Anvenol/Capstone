@@ -63,18 +63,18 @@ def load_all(params):
     # print(mlog_stats.max())
 
     '''返还class数量'''
-    # user_num = user_demographics['userId'].value_counts().count()
     # province_num = user_demographics['province'].value_counts().count()
     # gender_num = user_demographics['gender'].value_counts().count()
-    # mlog_num = mlog_stats['mlogId'].value_counts().count()
+    mlog_num = mlog_stats['mlogId'].value_counts().count()
+    user_num = user_demographics['userId'].value_counts().count()
     user_cat_num = 3
     user_int_num = 4
     mlog_cat_num = 1
     mlog_int_num = 9
     '''标准化'''
-    user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:] - user_demographics.iloc[:,
-                                                                     3:].mean()) / user_demographics.iloc[:, 3:].std()
-    mlog_stats.iloc[:, 1:] = (mlog_stats.iloc[:, 1:] - mlog_stats.iloc[:, 1:].mean()) / mlog_stats.iloc[:, 1:].std()
+    user_demographics.iloc[:, user_cat_num:] = (user_demographics.iloc[:, user_cat_num:] - user_demographics.iloc[:,
+                                                                     user_cat_num:].mean()) / user_demographics.iloc[:, user_cat_num:].std()
+    mlog_stats.iloc[:, mlog_cat_num:] = (mlog_stats.iloc[:, mlog_cat_num:] - mlog_stats.iloc[:, mlog_cat_num:].mean()) / mlog_stats.iloc[:, mlog_cat_num:].std()
     ''''''
     user_cat_dims = []
     for i in range(user_cat_num):
@@ -120,10 +120,10 @@ def load_all(params):
     # print(user_demographics.max())
     # print(mlog_stats.max())
 
-    # params.user_num = user_num
     # params.province_num = province_num
     # params.gender_num = gender_num
-    # params.mlog_num = mlog_num
+    params.user_num = user_num
+    params.mlog_num = mlog_num
     params.user_cat_dims = user_cat_dims
     params.mlog_cat_dims = mlog_cat_dims
     params.user_int_num = user_int_num
@@ -135,30 +135,32 @@ def load_all(params):
 
 
 class TrainSet(data.Dataset):
-    def __init__(self, user_features, item_features, values):
+    def __init__(self, user_features, item_features, values, user_cat_num, mlog_cat_num):
         super(TrainSet, self).__init__()
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
         """
         self.user_features = user_features
         self.item_features = item_features
+        self.user_cat_num = user_cat_num
+        self.mlog_cat_num = mlog_cat_num
         self.labels = values
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        user_cat = self.user_features[idx, :3].astype(int)
-        user_num = self.user_features[idx, 3:].astype(np.float32)
-        item_cat = self.item_features[idx, 0].astype(int)
-        item_num = self.item_features[idx, 1:].astype(np.float32)
+        user_cat = self.user_features[idx, :self.user_cat_num].astype(int)
+        user_num = self.user_features[idx, self.user_cat_num:].astype(np.float32)
+        item_cat = self.item_features[idx, :self.mlog_cat_num].astype(int)
+        item_num = self.item_features[idx, self.mlog_cat_num:].astype(np.float32)
         label = self.labels[idx]
         return user_cat, user_num, item_cat, item_num, label
 
 
 class TestSet(data.Dataset):
     def __init__(self, user_features, item_features, values, user_features_all,
-                 item_features_all, values_all, user_num, mlog_num, test_ng):
+                 item_features_all, values_all, user_num, mlog_num, test_ng, user_cat_num, mlog_cat_num):
         super(TestSet, self).__init__()
         """ Note that the labels are only useful when training, we thus 
             add them in the ng_sample() function.
@@ -178,6 +180,8 @@ class TestSet(data.Dataset):
         self.mlog_num = mlog_num
         self.test_ng = test_ng
         self.item_id_all = item_features_all
+        self.user_cat_num = user_cat_num
+        self.mlog_cat_num = mlog_cat_num
 
     def __len__(self):
         return (self.test_ng + 1) * self.user_positive_features.shape[0]
@@ -206,8 +210,8 @@ class TestSet(data.Dataset):
             self.labels_fill += labels_ps + labels_ng
 
     def __getitem__(self, idx):
-        user_cat = self.user_fill[idx, :3].astype(int)
-        user_num = self.user_fill[idx, 3:].astype(np.float32)
-        item_cat = self.item_fill[idx, 0].astype(int)
-        item_num = self.item_fill[idx, 1:].astype(np.float32)
+        user_cat = self.user_fill[idx, :self.user_cat_num].astype(int)
+        user_num = self.user_fill[idx, self.user_cat_num:].astype(np.float32)
+        item_cat = self.item_fill[idx, :self.mlog_cat_num].astype(int)
+        item_num = self.item_fill[idx, self.mlog_cat_num:].astype(np.float32)
         return user_cat, user_num, item_cat, item_num
