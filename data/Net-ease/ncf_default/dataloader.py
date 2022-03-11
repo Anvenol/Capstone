@@ -66,12 +66,20 @@ def load_all(params):
     print(mlog_stats.max())
 
     '''返还class数量'''
-    user_num = user_demographics['userId'].value_counts().count()
-    province_num = user_demographics['province'].value_counts().count()
-    gender_num = user_demographics['gender'].value_counts().count()
+    # user_num = user_demographics['userId'].value_counts().count()
+    # province_num = user_demographics['province'].value_counts().count()
+    # gender_num = user_demographics['gender'].value_counts().count()
+    # mlog_num = mlog_stats['mlogId'].value_counts().count()
+    user_cat_num = 3
     user_int_num = 4
+    mlog_cat_num = 1
     mlog_int_num = 9
-    mlog_num = mlog_stats['mlogId'].value_counts().count()
+    user_cat_dims = []
+    for i in range(user_cat_num):
+        user_cat_dims.append(user_demographics.iloc[:,i].value_counts().count())
+    mlog_cat_dims = []
+    for i in range(mlog_cat_num):
+        mlog_cat_dims.append(mlog_stats.iloc[:,i].value_counts().count())
 
     impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
@@ -110,12 +118,16 @@ def load_all(params):
     # print(user_demographics.max())
     # print(mlog_stats.max())
 
-    params.user_num = user_num
-    params.province_num = province_num
-    params.gender_num = gender_num
-    params.mlog_num = mlog_num
+    # params.user_num = user_num
+    # params.province_num = province_num
+    # params.gender_num = gender_num
+    # params.mlog_num = mlog_num
+    params.user_cat_dims = user_cat_dims
+    params.mlog_cat_dims = mlog_cat_dims
     params.user_int_num = user_int_num
     params.mlog_int_num = mlog_int_num
+    params.user_cat_num = user_cat_num
+    params.mlog_cat_num = mlog_cat_num
     return all_user_data, all_item_data, isclick, user_train, user_test, item_train, item_test, \
            y_train, y_test, params
 
