@@ -44,26 +44,23 @@ def load_all(params):
     user_demographics[['age', 'gender']] = user_demographics[['gender', 'age']]
     user_demographics.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
     user_demographics.fillna(user_demographics.mean(), inplace=True)
-    # user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:] - user_demographics.iloc[:,
-    #                                                                  3:].mean()) / user_demographics.iloc[:, 3:].std()
     # print(user_demographics.head())
 
     mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe.fit_transform(x))
     mlog_stats.iloc[:, 1:].fillna(mlog_stats.iloc[:, 1:].mean())
-    # mlog_stats.iloc[:, 1:] = (mlog_stats.iloc[:, 1:] - mlog_stats.iloc[:, 1:].mean()) / mlog_stats.iloc[:, 1:].std()
 
     '''标准化'''
-    sc = StandardScaler()
-    user_demographics.iloc[:, [6]] = sc.fit_transform(user_demographics.iloc[:, [6]])
-    mlog_stats.iloc[:, [1]] = sc.fit_transform(mlog_stats.iloc[:, [1]])
-
-    mm = MinMaxScaler()
-    rs = RobustScaler()
-    user_demographics.iloc[:, [3,4,5]] = rs.fit_transform(user_demographics.iloc[:, [3,4,5]])
-    mlog_stats.iloc[:, 2:] = rs.fit_transform(mlog_stats.iloc[:, 2:])
-
-    print(user_demographics.max())
-    print(mlog_stats.max())
+    # sc = StandardScaler()
+    # user_demographics.iloc[:, [6]] = sc.fit_transform(user_demographics.iloc[:, [6]])
+    # mlog_stats.iloc[:, [1]] = sc.fit_transform(mlog_stats.iloc[:, [1]])
+    #
+    # mm = MinMaxScaler()
+    # rs = RobustScaler()
+    # user_demographics.iloc[:, [3,4,5]] = rs.fit_transform(user_demographics.iloc[:, [3,4,5]])
+    # mlog_stats.iloc[:, 2:] = rs.fit_transform(mlog_stats.iloc[:, 2:])
+    #
+    # print(user_demographics.max())
+    # print(mlog_stats.max())
 
     '''返还class数量'''
     # user_num = user_demographics['userId'].value_counts().count()
@@ -74,6 +71,11 @@ def load_all(params):
     user_int_num = 4
     mlog_cat_num = 1
     mlog_int_num = 9
+    '''标准化'''
+    user_demographics.iloc[:, 3:] = (user_demographics.iloc[:, 3:] - user_demographics.iloc[:,
+                                                                     3:].mean()) / user_demographics.iloc[:, 3:].std()
+    mlog_stats.iloc[:, 1:] = (mlog_stats.iloc[:, 1:] - mlog_stats.iloc[:, 1:].mean()) / mlog_stats.iloc[:, 1:].std()
+    ''''''
     user_cat_dims = []
     for i in range(user_cat_num):
         user_cat_dims.append(user_demographics.iloc[:,i].value_counts().count())
