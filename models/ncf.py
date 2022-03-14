@@ -208,9 +208,10 @@ class Net(nn.Module):
         embed_user_linear = self.user_embedding4(user_num)
         user = torch.cat((embed_userid, embed_province, embed_gender, embed_user_linear), dim=1)
 
-        embed_mlogid = self.mlog_embedding1(item_cat)
-        embed_mlog_linear = self.mlog_embedding2(item_num)
-        item = torch.cat((embed_mlogid, embed_mlog_linear), dim=1)
+        embed_mlogid = self.mlog_embedding1(item_cat[:,0])
+        embed_mloggender = self.mlog_embedding2(item_cat[:,1])
+        embed_mlog_linear = self.mlog_embedding3(item_num)
+        item = torch.cat((embed_mlogid,embed_mloggender, embed_mlog_linear), dim=1)
 
         if not self.model == 'MLP':
             embed_user_GMF = self.embed_user_GMF(user)

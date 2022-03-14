@@ -65,7 +65,7 @@ def load_all(params):
 
     lbe = LabelEncoder()
     user_data[['province', 'gender']] = user_data[['province', 'gender']].apply(lambda x: lbe.fit_transform(x))
-    mlog_data[[ 'gender']] = mlog_data[[ 'gender']].apply(lambda x: lbe.fit_transform(x))
+    mlog_data[['gender']] = mlog_data[['gender']].apply(lambda x: lbe.fit_transform(x))
 
     # user_demographics.fillna(user_demographics.mean(), inplace=True)
     # mlog_stats.iloc[:, 1:].fillna(mlog_stats.iloc[:, 1:].mean())
