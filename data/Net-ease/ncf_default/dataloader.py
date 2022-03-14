@@ -92,9 +92,9 @@ def load_all(params):
     mlog_num = mlog_data['mlogId'].value_counts().count()
     user_num = user_data['userId'].value_counts().count()
     user_cat_num = 3
-    user_int_num = user_num-user_cat_num
+    user_int_num = user_data.shape[1]-user_cat_num
     mlog_cat_num = 2
-    mlog_int_num = mlog_num-mlog_cat_num
+    mlog_int_num = mlog_data.shape[1]-mlog_cat_num
     '''标准化'''
     user_data.iloc[:, user_cat_num:].fillna(user_data.iloc[:, user_cat_num:].mean(), inplace=True)
     mlog_data.iloc[:, mlog_cat_num:].fillna(mlog_data.iloc[:, mlog_cat_num:].mean(), inplace=True)
