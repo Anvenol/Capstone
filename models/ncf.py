@@ -102,10 +102,10 @@ class Net(nn.Module):
         # self.custom_embedding1 = nn.Embedding(num_class, embed_size)
         factor_num = params.factor_num
         num_layers = params.num_layers
-        # user_num = params.user_num
-        # mlog_num = params.mlog_num
-        # province_num = params.province_num
-        # gender_num = params.gender_num
+        user_num = params.user_num
+        mlog_num = params.mlog_num
+        province_num = params.province_num
+        gender_num = params.gender_num
         user_int_num = params.user_int_num
         mlog_int_num = params.mlog_int_num
         user_cat_num = params.user_cat_num
@@ -113,26 +113,27 @@ class Net(nn.Module):
         user_cat_dims = params.user_cat_dims
         mlog_cat_dims = params.mlog_cat_dims
 
-        # self.user_embedding1 = nn.Embedding(user_num, 10)
-        # self.user_embedding2 = nn.Embedding(province_num, 10)
-        # self.user_embedding3 = nn.Embedding(gender_num, 10)
-        # self.user_embedding4 = nn.Linear(user_int_num,10)
-        # self.mlog_embedding1 = nn.Embedding(mlog_num, 10)
-        # self.mlog_embedding2 = nn.Linear(mlog_int_num,10)
+        self.user_embedding1 = nn.Embedding(user_cat_dims[0], 10)
+        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 10)
+        self.user_embedding3 = nn.Embedding(user_cat_dims[2], 10)
+        self.user_embedding4 = nn.Linear(user_int_num,10)
+        self.mlog_embedding1 = nn.Embedding(mlog_cat_dims[0], 10)
+        self.mlog_embedding2 = nn.Embedding(mlog_cat_dims[1], 10)
+        self.mlog_embedding3 = nn.Linear(mlog_int_num,10)
 
         # __init__(self, d_hidden: int, n_vars: int, cat_vars: int, cat_dims: List[int], dropout: float = 0.0)
-        self.embed_user_GMF = VSN(d_hidden=factor_num, n_vars=user_int_num, cat_vars=user_cat_num, cat_dims=user_cat_dims)
-        self.embed_item_GMF = VSN(d_hidden=factor_num, n_vars=mlog_int_num, cat_vars=mlog_cat_num, cat_dims=mlog_cat_dims)
-        self.embed_user_MLP = VSN(d_hidden=factor_num * (2 ** (num_layers - 1)), n_vars=user_int_num, cat_vars=user_cat_num, cat_dims=user_cat_dims)
-        self.embed_item_MLP = VSN(d_hidden=factor_num * (2 ** (num_layers - 1)), n_vars=mlog_int_num, cat_vars=mlog_cat_num, cat_dims=mlog_cat_dims)
+        # self.embed_user_GMF = VSN(d_hidden=factor_num, n_vars=user_int_num, cat_vars=user_cat_num, cat_dims=user_cat_dims)
+        # self.embed_item_GMF = VSN(d_hidden=factor_num, n_vars=mlog_int_num, cat_vars=mlog_cat_num, cat_dims=mlog_cat_dims)
+        # self.embed_user_MLP = VSN(d_hidden=factor_num * (2 ** (num_layers - 1)), n_vars=user_int_num, cat_vars=user_cat_num, cat_dims=user_cat_dims)
+        # self.embed_item_MLP = VSN(d_hidden=factor_num * (2 ** (num_layers - 1)), n_vars=mlog_int_num, cat_vars=mlog_cat_num, cat_dims=mlog_cat_dims)
 
         #
-        # self.embed_user_GMF = nn.Linear(40, factor_num)
-        # self.embed_item_GMF = nn.Linear(20, factor_num)
-        # self.embed_user_MLP = nn.Linear(
-        #     40, factor_num * (2 ** (num_layers - 1)))
-        # self.embed_item_MLP = nn.Linear(
-        #     20, factor_num * (2 ** (num_layers - 1)))
+        self.embed_user_GMF = nn.Linear(user_cat_num*10+10, factor_num)
+        self.embed_item_GMF = nn.Linear(mlog_cat_num*10+10, factor_num)
+        self.embed_user_MLP = nn.Linear(
+            user_cat_num*10+10, factor_num * (2 ** (num_layers - 1)))
+        self.embed_item_MLP = nn.Linear(
+            mlog_cat_num*10+10, factor_num * (2 ** (num_layers - 1)))
 
         MLP_modules = []
         for i in range(num_layers):
@@ -201,27 +202,27 @@ class Net(nn.Module):
         for i in range(numerical_feature_start):
           embed_userid = self.user_embedding1(user_cat[:, i])
         """
-        # embed_userid = self.user_embedding1(user_cat[:, 0])
-        # embed_province = self.user_embedding2(user_cat[:, 1])
-        # embed_gender = self.user_embedding3(user_cat[:, 2])
-        # embed_user_linear = self.user_embedding4(user_num)
-        # user = torch.cat((embed_userid, embed_province, embed_gender, embed_user_linear), dim=1)
-        #
-        # embed_mlogid = self.mlog_embedding1(item_cat)
-        # embed_mlog_linear = self.mlog_embedding2(item_num)
-        # item = torch.cat((embed_mlogid, embed_mlog_linear), dim=1)
+        embed_userid = self.user_embedding1(user_cat[:, 0])
+        embed_province = self.user_embedding2(user_cat[:, 1])
+        embed_gender = self.user_embedding3(user_cat[:, 2])
+        embed_user_linear = self.user_embedding4(user_num)
+        user = torch.cat((embed_userid, embed_province, embed_gender, embed_user_linear), dim=1)
+
+        embed_mlogid = self.mlog_embedding1(item_cat)
+        embed_mlog_linear = self.mlog_embedding2(item_num)
+        item = torch.cat((embed_mlogid, embed_mlog_linear), dim=1)
 
         if not self.model == 'MLP':
-            # embed_user_GMF = self.embed_user_GMF(user)
-            # embed_item_GMF = self.embed_item_GMF(item)
-            embed_user_GMF = self.embed_user_GMF.forward(variables=user_num,cat_variables=user_cat)[0]
-            embed_item_GMF = self.embed_item_GMF.forward(variables=item_num,cat_variables=item_cat)[0]
+            embed_user_GMF = self.embed_user_GMF(user)
+            embed_item_GMF = self.embed_item_GMF(item)
+            # embed_user_GMF = self.embed_user_GMF.forward(variables=user_num,cat_variables=user_cat)[0]
+            # embed_item_GMF = self.embed_item_GMF.forward(variables=item_num,cat_variables=item_cat)[0]
             output_GMF = embed_user_GMF * embed_item_GMF
         if not self.model == 'GMF':
-            # embed_user_MLP = self.embed_user_MLP(user)
-            # embed_item_MLP = self.embed_item_MLP(item)
-            embed_user_MLP = self.embed_user_MLP.forward(variables=user_num,cat_variables=user_cat)[0]
-            embed_item_MLP = self.embed_item_MLP.forward(variables=user_num,cat_variables=user_cat)[0]
+            embed_user_MLP = self.embed_user_MLP(user)
+            embed_item_MLP = self.embed_item_MLP(item)
+            # embed_user_MLP = self.embed_user_MLP.forward(variables=user_num,cat_variables=user_cat)[0]
+            # embed_item_MLP = self.embed_item_MLP.forward(variables=user_num,cat_variables=user_cat)[0]
             interaction = torch.cat((embed_user_MLP, embed_item_MLP), -1)
             output_MLP = self.MLP_layers(interaction)
 

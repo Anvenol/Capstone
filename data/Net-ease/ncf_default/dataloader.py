@@ -22,6 +22,12 @@ def load_all(params):
         os.path.join('data', params.data_dir, params.user_demographics))
     impression_data = pd.read_csv(
         os.path.join('data', params.data_dir, params.impression_data), iterator=True)
+    mlog_demographics = pd.read_csv(
+        os.path.join('data', params.data_dir, params.mlog_demographics))
+    creator_demographics = pd.read_csv(
+        os.path.join('data', params.data_dir, params.creator_demographics))
+    creator_stats = pd.read_csv(
+        os.path.join('data', params.data_dir, params.creator_stats))
     ###########
     # mlog_stats = mlog_stats.get_chunk(1000)
     # user_demographics = user_demographics.get_chunk(1000)
@@ -31,23 +37,38 @@ def load_all(params):
     # user_demographics[user_demographics['gender'] == 'unknown'] = np.nan
     # b=user_demographics['gender'].unique()
     # a=user_demographics['gender'].value_counts().count()
+    '''user'''
+    group1 = impression_data.groupby('userId').sum()
+    total_num = group1.loc[:, ['isClick', 'isLike', 'isComment', 'isIntoPersonalHomepage',
+                               'isShare', 'isViewComment', 'mlogViewTime']]
+    total_num.columns = [i + '_total' for i in total_num.columns]
+    total_num['clickto_comment'] = total_num['isComment_total'] / total_num['isClick_total']
+    total_num['clickto_like'] = total_num['isLike_total'] / total_num['isClick_total']
+    total_num['clickto_homepage'] = total_num['isIntoPersonalHomepage_total'] / total_num['isClick_total']
+    total_num['clickto_share'] = total_num['isShare_total'] / total_num['isClick_total']
+    total_num['clickto_viewcomment'] = total_num['isViewComment_total'] / total_num['isClick_total']
+    user_data = pd.merge(user_demographics, total_num, on='userId', how='left')
+    user_data[['age', 'gender']] = user_data[['gender', 'age']]
+    user_data.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
+    '''mlog'''
+    mlog_data = pd.merge(mlog_stats, mlog_demographics, on='mlogId',how='left')
+    mlog_data = pd.merge(mlog_data, creator_demographics, on='creatorId',how='left')
+    mlog_data = pd.merge(mlog_data, creator_stats, on='creatorId', how='left')
+    mlog_data.drop(columns=['creatorId','songId','artistId'], inplace=True)
+    mlog_data[['dt_x', 'gender']] = mlog_data[['gender', 'dt_x']]
+    mlog_data.rename(columns={'dt_x': 'gender', 'gender': 'dt_x'}, inplace=True)
     '''用sklearn来转换标注'''
-
     lbe_user = LabelEncoder()
-    user_demographics[['userId']] = user_demographics[['userId']].apply(lambda x: lbe_user.fit_transform(x))
+    user_data[['userId']] = user_data[['userId']].apply(lambda x: lbe_user.fit_transform(x))
     lbe_mlog = LabelEncoder()
-    mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe_mlog.fit_transform(x))
+    mlog_data[['mlogId']] = mlog_data[['mlogId']].apply(lambda x: lbe_mlog.fit_transform(x))
 
     lbe = LabelEncoder()
-    user_demographics[['province', 'gender']] = user_demographics[['province', 'gender']].apply(
-        lambda x: lbe.fit_transform(x))
-    user_demographics[['age', 'gender']] = user_demographics[['gender', 'age']]
-    user_demographics.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
-    user_demographics.fillna(user_demographics.mean(), inplace=True)
-    # print(user_demographics.head())
+    user_data[['province', 'gender']] = user_data[['province', 'gender']].apply(lambda x: lbe.fit_transform(x))
+    mlog_data[[ 'gender']] = mlog_data[[ 'gender']].apply(lambda x: lbe.fit_transform(x))
 
-    mlog_stats[['mlogId']] = mlog_stats[['mlogId']].apply(lambda x: lbe.fit_transform(x))
-    mlog_stats.iloc[:, 1:].fillna(mlog_stats.iloc[:, 1:].mean())
+    # user_demographics.fillna(user_demographics.mean(), inplace=True)
+    # mlog_stats.iloc[:, 1:].fillna(mlog_stats.iloc[:, 1:].mean())
 
     '''标准化'''
     # sc = StandardScaler()
@@ -68,9 +89,9 @@ def load_all(params):
     mlog_num = mlog_stats['mlogId'].value_counts().count()
     user_num = user_demographics['userId'].value_counts().count()
     user_cat_num = 3
-    user_int_num = 4
-    mlog_cat_num = 1
-    mlog_int_num = 9
+    user_int_num = user_num-user_cat_num
+    mlog_cat_num = 2
+    mlog_int_num = mlog_num-mlog_cat_num
     '''标准化'''
     user_demographics.iloc[:, user_cat_num:] = (user_demographics.iloc[:, user_cat_num:] - user_demographics.iloc[:,
                                                                      user_cat_num:].mean()) / user_demographics.iloc[:, user_cat_num:].std()
