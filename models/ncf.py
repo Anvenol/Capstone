@@ -102,10 +102,10 @@ class Net(nn.Module):
         # self.custom_embedding1 = nn.Embedding(num_class, embed_size)
         factor_num = params.factor_num
         num_layers = params.num_layers
-        user_num = params.user_num
-        mlog_num = params.mlog_num
-        province_num = params.province_num
-        gender_num = params.gender_num
+        # user_num = params.user_num
+        # mlog_num = params.mlog_num
+        # province_num = params.province_num
+        # gender_num = params.gender_num
         user_int_num = params.user_int_num
         mlog_int_num = params.mlog_int_num
         user_cat_num = params.user_cat_num

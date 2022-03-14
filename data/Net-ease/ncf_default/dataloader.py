@@ -57,7 +57,7 @@ def load_all(params):
     cre_num2 = creator_stats.groupby('creatorId').mean()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_mean'})
     mlog_data = pd.merge(mlog_data, cre_num1, on='creatorId', how='left')
     mlog_data = pd.merge(mlog_data, cre_num2, on='creatorId', how='left')
-    mlog_data.drop(columns=['creatorId','songId','artistId'], inplace=True)
+    mlog_data.drop(columns=['creatorId','songId','artistId','contentId'], inplace=True)
     mlog_data[['dt', 'gender']] = mlog_data[['gender', 'dt']]
     mlog_data.rename(columns={'dt': 'gender', 'gender': 'dt'}, inplace=True)
     '''用sklearn来转换标注'''
@@ -89,23 +89,25 @@ def load_all(params):
     '''返还class数量'''
     # province_num = user_demographics['province'].value_counts().count()
     # gender_num = user_demographics['gender'].value_counts().count()
-    mlog_num = mlog_stats['mlogId'].value_counts().count()
-    user_num = user_demographics['userId'].value_counts().count()
+    mlog_num = mlog_data['mlogId'].value_counts().count()
+    user_num = user_data['userId'].value_counts().count()
     user_cat_num = 3
     user_int_num = user_num-user_cat_num
     mlog_cat_num = 2
     mlog_int_num = mlog_num-mlog_cat_num
     '''标准化'''
-    user_demographics.iloc[:, user_cat_num:] = (user_demographics.iloc[:, user_cat_num:] - user_demographics.iloc[:,
-                                                                     user_cat_num:].mean()) / user_demographics.iloc[:, user_cat_num:].std()
-    mlog_stats.iloc[:, mlog_cat_num:] = (mlog_stats.iloc[:, mlog_cat_num:] - mlog_stats.iloc[:, mlog_cat_num:].mean()) / mlog_stats.iloc[:, mlog_cat_num:].std()
+    user_data.iloc[:, user_cat_num:].fillna(user_data.iloc[:, user_cat_num:].mean(), inplace=True)
+    mlog_data.iloc[:, mlog_cat_num:].fillna(mlog_data.iloc[:, mlog_cat_num:].mean(), inplace=True)
+    user_data.iloc[:, user_cat_num:] = (user_data.iloc[:, user_cat_num:] - user_data.iloc[:,
+                                                                     user_cat_num:].mean()) / user_data.iloc[:, user_cat_num:].std()
+    mlog_data.iloc[:, mlog_cat_num:] = (mlog_data.iloc[:, mlog_cat_num:] - mlog_data.iloc[:, mlog_cat_num:].mean()) / mlog_data.iloc[:, mlog_cat_num:].std()
     ''''''
     user_cat_dims = []
     for i in range(user_cat_num):
-        user_cat_dims.append(user_demographics.iloc[:,i].value_counts().count())
+        user_cat_dims.append(user_data.iloc[:,i].value_counts().count())
     mlog_cat_dims = []
     for i in range(mlog_cat_num):
-        mlog_cat_dims.append(mlog_stats.iloc[:,i].value_counts().count())
+        mlog_cat_dims.append(mlog_data.iloc[:,i].value_counts().count())
 
     impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
