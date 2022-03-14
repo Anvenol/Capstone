@@ -53,7 +53,10 @@ def load_all(params):
     '''mlog'''
     mlog_data = pd.merge(mlog_stats, mlog_demographics, on='mlogId',how='left')
     mlog_data = pd.merge(mlog_data, creator_demographics, on='creatorId',how='left')
-    mlog_data = pd.merge(mlog_data, creator_stats, on='creatorId', how='left')
+    cre_num1 = creator_stats.groupby('creatorId').sum()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_total'})
+    cre_num2 = creator_stats.groupby('creatorId').mean()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_mean'})
+    mlog_data = pd.merge(mlog_data, cre_num1, on='creatorId', how='left')
+    mlog_data = pd.merge(mlog_data, cre_num2, on='creatorId', how='left')
     mlog_data.drop(columns=['creatorId','songId','artistId'], inplace=True)
     mlog_data[['dt_x', 'gender']] = mlog_data[['gender', 'dt_x']]
     mlog_data.rename(columns={'dt_x': 'gender', 'gender': 'dt_x'}, inplace=True)
