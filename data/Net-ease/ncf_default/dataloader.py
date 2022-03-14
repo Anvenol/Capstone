@@ -58,8 +58,8 @@ def load_all(params):
     mlog_data = pd.merge(mlog_data, cre_num1, on='creatorId', how='left')
     mlog_data = pd.merge(mlog_data, cre_num2, on='creatorId', how='left')
     mlog_data.drop(columns=['creatorId','songId','artistId'], inplace=True)
-    mlog_data[['dt_x', 'gender']] = mlog_data[['gender', 'dt_x']]
-    mlog_data.rename(columns={'dt_x': 'gender', 'gender': 'dt_x'}, inplace=True)
+    mlog_data[['dt', 'gender']] = mlog_data[['gender', 'dt']]
+    mlog_data.rename(columns={'dt': 'gender', 'gender': 'dt'}, inplace=True)
     '''用sklearn来转换标注'''
     lbe_user = LabelEncoder()
     user_data[['userId']] = user_data[['userId']].apply(lambda x: lbe_user.fit_transform(x))
