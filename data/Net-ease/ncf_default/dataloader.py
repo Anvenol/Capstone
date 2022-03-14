@@ -113,8 +113,8 @@ def load_all(params):
     impression_data.dropna(axis=0, how='any', inplace=False)
 
     all_user_data = impression_data['userId'].apply(
-        lambda x: user_demographics[user_demographics['userId'] == x].values[0])
-    all_item_data = impression_data['mlogId'].apply(lambda x: mlog_stats[mlog_stats['mlogId'] == x].values[0])
+        lambda x: user_data[user_data['userId'] == x].values[0])
+    all_item_data = impression_data['mlogId'].apply(lambda x: mlog_data[mlog_data['mlogId'] == x].values[0])
 
     all_user_data = np.stack(all_user_data.values)
     all_item_data = np.stack(all_item_data.values)
