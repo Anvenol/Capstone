@@ -102,8 +102,8 @@ class Net(nn.Module):
         # self.custom_embedding1 = nn.Embedding(num_class, embed_size)
         factor_num = params.factor_num
         num_layers = params.num_layers
-        # user_num = params.user_num
-        # mlog_num = params.mlog_num
+        user_num = params.user_num
+        mlog_num = params.mlog_num
         # province_num = params.province_num
         # gender_num = params.gender_num
         user_int_num = params.user_int_num
@@ -118,8 +118,14 @@ class Net(nn.Module):
         self.user_embedding3 = nn.Embedding(user_cat_dims[2], 10)
         self.user_embedding4 = nn.Linear(user_int_num,10)
         self.mlog_embedding1 = nn.Embedding(mlog_cat_dims[0], 10)
-        self.mlog_embedding2 = nn.Embedding(mlog_cat_dims[1], 10)
-        self.mlog_embedding3 = nn.Linear(mlog_int_num,10)
+        self.mlog_embedding2 = nn.Linear(mlog_int_num,10)
+
+        self.embed_user_GMF = nn.Linear(40, factor_num)
+        self.embed_item_GMF = nn.Linear(20, factor_num)
+        self.embed_user_MLP = nn.Linear(
+            40, factor_num * (2 ** (num_layers - 1)))
+        self.embed_item_MLP = nn.Linear(
+            20, factor_num * (2 ** (num_layers - 1)))
 
         # __init__(self, d_hidden: int, n_vars: int, cat_vars: int, cat_dims: List[int], dropout: float = 0.0)
         # self.embed_user_GMF = VSN(d_hidden=factor_num, n_vars=user_int_num, cat_vars=user_cat_num, cat_dims=user_cat_dims)
@@ -128,12 +134,12 @@ class Net(nn.Module):
         # self.embed_item_MLP = VSN(d_hidden=factor_num * (2 ** (num_layers - 1)), n_vars=mlog_int_num, cat_vars=mlog_cat_num, cat_dims=mlog_cat_dims)
 
         #
-        self.embed_user_GMF = nn.Linear(user_cat_num*10+10, factor_num)
-        self.embed_item_GMF = nn.Linear(mlog_cat_num*10+10, factor_num)
-        self.embed_user_MLP = nn.Linear(
-            user_cat_num*10+10, factor_num * (2 ** (num_layers - 1)))
-        self.embed_item_MLP = nn.Linear(
-            mlog_cat_num*10+10, factor_num * (2 ** (num_layers - 1)))
+        # self.embed_user_GMF = nn.Linear(user_cat_num*10+10, factor_num)
+        # self.embed_item_GMF = nn.Linear(mlog_cat_num*10+10, factor_num)
+        # self.embed_user_MLP = nn.Linear(
+        #     user_cat_num*10+10, factor_num * (2 ** (num_layers - 1)))
+        # self.embed_item_MLP = nn.Linear(
+        #     mlog_cat_num*10+10, factor_num * (2 ** (num_layers - 1)))
 
         MLP_modules = []
         for i in range(num_layers):

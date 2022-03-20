@@ -32,34 +32,50 @@ def load_all(params):
     # mlog_stats = mlog_stats.get_chunk(1000)
     # user_demographics = user_demographics.get_chunk(1000)
     impression_data = impression_data.get_chunk(1000)
-    ##########
-    '''处理性别'''
-    # user_demographics[user_demographics['gender'] == 'unknown'] = np.nan
-    # b=user_demographics['gender'].unique()
-    # a=user_demographics['gender'].value_counts().count()
+    '''Impression'''
+    def get_test_data(x):
+        df = x.sort_values(by='impressTime', ascending=True)
+        return df.iloc[-1, :]
+
+    def get_train_data(x):
+        df = x.sort_values(by='impressTime', ascending=True)
+        return df.iloc[:len(x)-1, :]
+
+    test_data = impression_data.groupby('userId').apply(get_test_data)
+    train_data = impression_data.groupby('userId').apply(get_train_data)
+
     '''user'''
-    group1 = impression_data.groupby('userId').sum()
-    total_num = group1.loc[:, ['isClick', 'isLike', 'isComment', 'isIntoPersonalHomepage',
-                               'isShare', 'isViewComment', 'mlogViewTime']]
-    total_num.columns = [i + '_total' for i in total_num.columns]
-    total_num['clickto_comment'] = total_num['isComment_total'] / total_num['isClick_total']
-    total_num['clickto_like'] = total_num['isLike_total'] / total_num['isClick_total']
-    total_num['clickto_homepage'] = total_num['isIntoPersonalHomepage_total'] / total_num['isClick_total']
-    total_num['clickto_share'] = total_num['isShare_total'] / total_num['isClick_total']
-    total_num['clickto_viewcomment'] = total_num['isViewComment_total'] / total_num['isClick_total']
-    user_data = pd.merge(user_demographics, total_num, on='userId', how='left')
+    # user_id = impression_data['userId'].unique()
+    # user_demographics = pd.merge(user_demographics, pd.Series(user_id, name='userId'), how='inner').iloc[:, :]
+    # group1 = impression_data.groupby('userId').sum()
+    # total_num = group1.loc[:, ['isClick', 'isLike', 'isComment', 'isIntoPersonalHomepage',
+    #                            'isShare', 'isViewComment', 'mlogViewTime']]
+    # total_num.columns = [i + '_total' for i in total_num.columns]
+    # total_num['clickto_comment'] = total_num['isComment_total'] / total_num['isClick_total']
+    # total_num['clickto_like'] = total_num['isLike_total'] / total_num['isClick_total']
+    # total_num['clickto_homepage'] = total_num['isIntoPersonalHomepage_total'] / total_num['isClick_total']
+    # total_num['clickto_share'] = total_num['isShare_total'] / total_num['isClick_total']
+    # total_num['clickto_viewcomment'] = total_num['isViewComment_total'] / total_num['isClick_total']
+    # user_data = pd.merge(user_demographics, total_num, on='userId', how='left')
+    user_data = user_demographics
     user_data[['age', 'gender']] = user_data[['gender', 'age']]
     user_data.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
+    user_data.loc[:,'gender'] = user_data.loc[:,'gender'].fillna('unknown')
+
     '''mlog'''
-    mlog_data = pd.merge(mlog_stats, mlog_demographics, on='mlogId',how='left')
-    mlog_data = pd.merge(mlog_data, creator_demographics, on='creatorId',how='left')
-    cre_num1 = creator_stats.groupby('creatorId').sum()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_total'})
-    cre_num2 = creator_stats.groupby('creatorId').mean()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_mean'})
-    mlog_data = pd.merge(mlog_data, cre_num1, on='creatorId', how='left')
-    mlog_data = pd.merge(mlog_data, cre_num2, on='creatorId', how='left')
-    mlog_data.drop(columns=['creatorId','songId','artistId','contentId'], inplace=True)
-    mlog_data[['dt', 'gender']] = mlog_data[['gender', 'dt']]
-    mlog_data.rename(columns={'dt': 'gender', 'gender': 'dt'}, inplace=True)
+    # mlog_id = impression_data['mlogId'].unique()
+    # mlog_stats = pd.merge(mlog_stats, pd.Series(mlog_id, name='mlogId'), how='inner').iloc[:, :]
+    # mlog_data = pd.merge(mlog_stats, mlog_demographics, on='mlogId',how='left')
+    # mlog_data = pd.merge(mlog_data, creator_demographics, on='creatorId',how='left')
+    # cre_num1 = creator_stats.groupby('creatorId').sum()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_total'})
+    # cre_num2 = creator_stats.groupby('creatorId').mean()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_mean'})
+    # mlog_data = pd.merge(mlog_data, cre_num1, on='creatorId', how='left')
+    # mlog_data = pd.merge(mlog_data, cre_num2, on='creatorId', how='left')
+    # mlog_data.drop(columns=['creatorId','songId','artistId','contentId','gender'], inplace=True)
+    # mlog_data[['dt', 'gender']] = mlog_data[['gender', 'dt']]
+    # mlog_data.rename(columns={'dt': 'gender', 'gender': 'dt'}, inplace=True)
+    mlog_data = mlog_stats
+
     '''用sklearn来转换标注'''
     lbe_user = LabelEncoder()
     user_data[['userId']] = user_data[['userId']].apply(lambda x: lbe_user.fit_transform(x))
@@ -68,36 +84,22 @@ def load_all(params):
 
     lbe = LabelEncoder()
     user_data[['province', 'gender']] = user_data[['province', 'gender']].apply(lambda x: lbe.fit_transform(x))
-    mlog_data[['gender']] = mlog_data[['gender']].apply(lambda x: lbe.fit_transform(x))
-
-    # user_demographics.fillna(user_demographics.mean(), inplace=True)
-    # mlog_stats.iloc[:, 1:].fillna(mlog_stats.iloc[:, 1:].mean())
-
-    '''标准化'''
-    # sc = StandardScaler()
-    # user_demographics.iloc[:, [6]] = sc.fit_transform(user_demographics.iloc[:, [6]])
-    # mlog_stats.iloc[:, [1]] = sc.fit_transform(mlog_stats.iloc[:, [1]])
-    #
-    # mm = MinMaxScaler()
-    # rs = RobustScaler()
-    # user_demographics.iloc[:, [3,4,5]] = rs.fit_transform(user_demographics.iloc[:, [3,4,5]])
-    # mlog_stats.iloc[:, 2:] = rs.fit_transform(mlog_stats.iloc[:, 2:])
-    #
-    # print(user_demographics.max())
-    # print(mlog_stats.max())
+    # mlog_data[['gender']] = mlog_data[['gender']].apply(lambda x: lbe.fit_transform(x))
 
     '''返还class数量'''
-    # province_num = user_demographics['province'].value_counts().count()
-    # gender_num = user_demographics['gender'].value_counts().count()
     mlog_num = mlog_data['mlogId'].value_counts().count()
     user_num = user_data['userId'].value_counts().count()
     user_cat_num = 3
     user_int_num = user_data.shape[1]-user_cat_num
-    mlog_cat_num = 2
+    mlog_cat_num = 1
     mlog_int_num = mlog_data.shape[1]-mlog_cat_num
+
     '''标准化'''
-    user_data.iloc[:, user_cat_num:].fillna(user_data.iloc[:, user_cat_num:].mean(), inplace=True)
-    mlog_data.iloc[:, mlog_cat_num:].fillna(mlog_data.iloc[:, mlog_cat_num:].mean(), inplace=True)
+    # user_data.iloc[:, user_cat_num:].fillna(user_data.iloc[:, user_cat_num:].mean(),inplace=True)
+    # mlog_data.iloc[:, mlog_cat_num:].fillna(mlog_data.iloc[:, mlog_cat_num:].mean(),inplace=True)
+    user_data.iloc[:, user_cat_num:] = user_data.iloc[:, user_cat_num:].fillna(0)
+    mlog_data.iloc[:, mlog_cat_num:] = mlog_data.iloc[:, mlog_cat_num:].fillna(0)
+
     user_data.iloc[:, user_cat_num:] = (user_data.iloc[:, user_cat_num:] - user_data.iloc[:,
                                                                      user_cat_num:].mean()) / user_data.iloc[:, user_cat_num:].std()
     mlog_data.iloc[:, mlog_cat_num:] = (mlog_data.iloc[:, mlog_cat_num:] - mlog_data.iloc[:, mlog_cat_num:].mean()) / mlog_data.iloc[:, mlog_cat_num:].std()
@@ -109,45 +111,49 @@ def load_all(params):
     for i in range(mlog_cat_num):
         mlog_cat_dims.append(mlog_data.iloc[:,i].value_counts().count())
 
-    impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
-    impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
-    impression_data['isClick'].fillna(0)
-    impression_data.dropna(axis=0, how='any', inplace=False)
+    ''''''
+    train_data[['userId']] = train_data[['userId']].apply(lambda x: lbe_user.transform(x))
+    train_data[['mlogId']] = train_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
+    train_data['isClick'].fillna(0)
+    train_data.dropna(axis=0, how='any', inplace=False)
+    train_user_data = train_data['userId'].apply(lambda x: user_data[user_data['userId'] == x].values[0]).fillna(0)
+    train_item_data = train_data['mlogId'].apply(lambda x: mlog_data[mlog_data['mlogId'] == x].values[0]).fillna(0)
+    user_train = np.stack(train_user_data.values)
+    item_train = np.stack(train_item_data.values)
+    y_train = train_data["isClick"].values.tolist()
 
-    all_user_data = impression_data['userId'].apply(
-        lambda x: user_data[user_data['userId'] == x].values[0])
-    all_item_data = impression_data['mlogId'].apply(lambda x: mlog_data[mlog_data['mlogId'] == x].values[0])
+    test_data[['userId']] = test_data[['userId']].apply(lambda x: lbe_user.transform(x))
+    test_data[['mlogId']] = test_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
+    test_data['isClick'].fillna(0)
+    test_data.dropna(axis=0, how='any', inplace=False)
+    test_user_data = test_data['userId'].apply(lambda x: user_data[user_data['userId'] == x].values[0]).fillna(0)
+    test_item_data = test_data['mlogId'].apply(lambda x: mlog_data[mlog_data['mlogId'] == x].values[0]).fillna(0)
+    user_test = np.stack(test_user_data.values)
+    item_test = np.stack(test_item_data.values)
+    y_test = test_data["isClick"].values.tolist()
 
-    all_user_data = np.stack(all_user_data.values)
-    all_item_data = np.stack(all_item_data.values)
-    isclick = impression_data["isClick"].values.tolist()
+    all_user_data = np.vstack((user_train, user_test))
+    all_item_data = np.vstack((item_train, item_test))
+    isclick = np.vstack((y_train, y_test))
 
-    user_train, user_test, item_train, item_test, y_train, y_test = train_test_split(all_user_data, all_item_data,
-                                                                                     isclick, test_size=0.33,
-                                                                                     random_state=42)
-
-    '''标准化'''
-    # sc = StandardScaler()
-    # mm = MinMaxScaler()
-    # rs = RobustScaler()
-    # ma = MaxAbsScaler()
-    # item_train[:, 1:] = ma.fit_transform(item_train[:, 1:])
-    # item_test[:, 1:] = ma.transform(item_test[:, 1:])
+    ''''''
+    # impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
+    # impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
+    # impression_data['isClick'].fillna(0)
+    # impression_data.dropna(axis=0, how='any', inplace=False)
     #
-    # user_train[:, 3:] = sc.fit_transform(user_train[:, 3:])
-    # user_test[:, 3:] = sc.transform(user_test[:, 3:])
-
-    # user_demographics.iloc[:, [6]] = sc.fit_transform(user_demographics.iloc[:, [6]])
-    # mlog_stats.iloc[:, [1]] = sc.fit_transform(mlog_stats.iloc[:, [1]])
-
-    # user_demographics.iloc[:, [3,4,5]] = rs.fit_transform(user_demographics.iloc[:, [3,4,5]])
-    # mlog_stats.iloc[:, 2:] = rs.fit_transform(mlog_stats.iloc[:, 2:])
+    # all_user_data = impression_data['userId'].apply(
+    #     lambda x: user_data[user_data['userId'] == x].values[0]).fillna(0)
+    # all_item_data = impression_data['mlogId'].apply(lambda x: mlog_data[mlog_data['mlogId'] == x].values[0]).fillna(0)
     #
-    # print(user_demographics.max())
-    # print(mlog_stats.max())
+    # all_user_data = np.stack(all_user_data.values)
+    # all_item_data = np.stack(all_item_data.values)
+    # isclick = impression_data["isClick"].values.tolist()
 
-    # params.province_num = province_num
-    # params.gender_num = gender_num
+    # user_train, user_test, item_train, item_test, y_train, y_test = train_test_split(all_user_data, all_item_data,
+    #                                                                                  isclick, test_size=0.33,
+    #                                                                                  random_state=42)
+
     params.user_num = user_num
     params.mlog_num = mlog_num
     params.user_cat_dims = user_cat_dims
@@ -178,7 +184,7 @@ class TrainSet(data.Dataset):
     def __getitem__(self, idx):
         user_cat = self.user_features[idx, :self.user_cat_num].astype(int)
         user_num = self.user_features[idx, self.user_cat_num:].astype(np.float32)
-        item_cat = self.item_features[idx, :self.mlog_cat_num].astype(int)
+        item_cat = self.item_features[idx, 0].astype(int)
         item_num = self.item_features[idx, self.mlog_cat_num:].astype(np.float32)
         label = self.labels[idx]
         return user_cat, user_num, item_cat, item_num, label
@@ -238,6 +244,6 @@ class TestSet(data.Dataset):
     def __getitem__(self, idx):
         user_cat = self.user_fill[idx, :self.user_cat_num].astype(int)
         user_num = self.user_fill[idx, self.user_cat_num:].astype(np.float32)
-        item_cat = self.item_fill[idx, :self.mlog_cat_num].astype(int)
+        item_cat = self.item_fill[idx, 0].astype(int)
         item_num = self.item_fill[idx, self.mlog_cat_num:].astype(np.float32)
         return user_cat, user_num, item_cat, item_num
