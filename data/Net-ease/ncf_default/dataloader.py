@@ -31,7 +31,7 @@ def load_all(params):
     ###########
     # mlog_stats = mlog_stats.get_chunk(1000)
     # user_demographics = user_demographics.get_chunk(1000)
-    impression_data = impression_data.get_chunk(1000)
+    impression_data = impression_data.get_chunk(1000000)
     '''Impression'''
     def get_test_data(x):
         df = x.sort_values(by='impressTime', ascending=True)
@@ -39,10 +39,7 @@ def load_all(params):
 
     def get_train_data(x):
         df = x.sort_values(by='impressTime', ascending=True)
-        return df.iloc[:len(x)-1, :]
-
-    test_data = impression_data.groupby('userId').apply(get_test_data)
-    train_data = impression_data.groupby('userId').apply(get_train_data)
+        return df.iloc[:len(x) - 1, :]
 
     '''user'''
     # user_id = impression_data['userId'].unique()
@@ -60,21 +57,21 @@ def load_all(params):
     user_data = user_demographics
     user_data[['age', 'gender']] = user_data[['gender', 'age']]
     user_data.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
-    user_data.loc[:,'gender'] = user_data.loc[:,'gender'].fillna('unknown')
+    user_data.loc[:, 'gender'] = user_data.loc[:, 'gender'].fillna('unknown')
 
     '''mlog'''
     # mlog_id = impression_data['mlogId'].unique()
     # mlog_stats = pd.merge(mlog_stats, pd.Series(mlog_id, name='mlogId'), how='inner').iloc[:, :]
-    # mlog_data = pd.merge(mlog_stats, mlog_demographics, on='mlogId',how='left')
-    # mlog_data = pd.merge(mlog_data, creator_demographics, on='creatorId',how='left')
+    mlog_data = pd.merge(mlog_stats, mlog_demographics, on='mlogId', how='left')
+    mlog_data = pd.merge(mlog_data, creator_demographics, on='creatorId', how='left')
     # cre_num1 = creator_stats.groupby('creatorId').sum()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_total'})
     # cre_num2 = creator_stats.groupby('creatorId').mean()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_mean'})
     # mlog_data = pd.merge(mlog_data, cre_num1, on='creatorId', how='left')
     # mlog_data = pd.merge(mlog_data, cre_num2, on='creatorId', how='left')
-    # mlog_data.drop(columns=['creatorId','songId','artistId','contentId','gender'], inplace=True)
-    # mlog_data[['dt', 'gender']] = mlog_data[['gender', 'dt']]
-    # mlog_data.rename(columns={'dt': 'gender', 'gender': 'dt'}, inplace=True)
-    mlog_data = mlog_stats
+    mlog_data.drop(columns=['creatorId', 'songId', 'artistId', 'contentId'], inplace=True)
+    mlog_data[['dt', 'gender']] = mlog_data[['gender', 'dt']]
+    mlog_data.rename(columns={'dt': 'gender', 'gender': 'dt'}, inplace=True)
+    # mlog_data = mlog_stats
 
     '''用sklearn来转换标注'''
     lbe_user = LabelEncoder()
@@ -84,15 +81,15 @@ def load_all(params):
 
     lbe = LabelEncoder()
     user_data[['province', 'gender']] = user_data[['province', 'gender']].apply(lambda x: lbe.fit_transform(x))
-    # mlog_data[['gender']] = mlog_data[['gender']].apply(lambda x: lbe.fit_transform(x))
+    mlog_data[['gender']] = mlog_data[['gender']].apply(lambda x: lbe.fit_transform(x))
 
     '''返还class数量'''
     mlog_num = mlog_data['mlogId'].value_counts().count()
     user_num = user_data['userId'].value_counts().count()
     user_cat_num = 3
-    user_int_num = user_data.shape[1]-user_cat_num
-    mlog_cat_num = 1
-    mlog_int_num = mlog_data.shape[1]-mlog_cat_num
+    user_int_num = user_data.shape[1] - user_cat_num
+    mlog_cat_num = 2
+    mlog_int_num = mlog_data.shape[1] - mlog_cat_num
 
     '''标准化'''
     # user_data.iloc[:, user_cat_num:].fillna(user_data.iloc[:, user_cat_num:].mean(),inplace=True)
@@ -100,20 +97,38 @@ def load_all(params):
     user_data.iloc[:, user_cat_num:] = user_data.iloc[:, user_cat_num:].fillna(0)
     mlog_data.iloc[:, mlog_cat_num:] = mlog_data.iloc[:, mlog_cat_num:].fillna(0)
 
-    user_data.iloc[:, user_cat_num:] = (user_data.iloc[:, user_cat_num:] - user_data.iloc[:,
-                                                                     user_cat_num:].mean()) / user_data.iloc[:, user_cat_num:].std()
-    mlog_data.iloc[:, mlog_cat_num:] = (mlog_data.iloc[:, mlog_cat_num:] - mlog_data.iloc[:, mlog_cat_num:].mean()) / mlog_data.iloc[:, mlog_cat_num:].std()
+    # user_data.iloc[:, user_cat_num:] = (user_data.iloc[:, user_cat_num:] - user_data.iloc[:,
+    #                                                                        user_cat_num:].mean()) / user_data.iloc[:,
+    #                                                                                                 user_cat_num:].std()
+    # mlog_data.iloc[:, mlog_cat_num:] = (mlog_data.iloc[:, mlog_cat_num:] - mlog_data.iloc[:,
+    #                                                                        mlog_cat_num:].mean()) / mlog_data.iloc[:,
+    #                                                                                                 mlog_cat_num:].std()
+    max_abs_scaler = MaxAbsScaler()
+    user_data.iloc[:, user_cat_num:] = max_abs_scaler.fit_transform(user_data.iloc[:, user_cat_num:])
+    mlog_data.iloc[:, mlog_cat_num:] = max_abs_scaler.fit_transform(mlog_data.iloc[:, mlog_cat_num:])
     ''''''
     user_cat_dims = []
     for i in range(user_cat_num):
-        user_cat_dims.append(user_data.iloc[:,i].value_counts().count())
+        user_cat_dims.append(user_data.iloc[:, i].value_counts().count())
     mlog_cat_dims = []
     for i in range(mlog_cat_num):
-        mlog_cat_dims.append(mlog_data.iloc[:,i].value_counts().count())
+        mlog_cat_dims.append(mlog_data.iloc[:, i].value_counts().count())
 
     ''''''
-    train_data[['userId']] = train_data[['userId']].apply(lambda x: lbe_user.transform(x))
-    train_data[['mlogId']] = train_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
+    leu_dict = dict(zip(lbe_user.classes_, lbe_user.transform(lbe_user.classes_)))
+    impression_data['userId'] = impression_data['userId'].apply(lambda x: leu_dict.get(x, 'Unknown'))
+    impression_data = impression_data[impression_data['userId'] != 'Unknown']
+    impression_data['userId'] = impression_data['userId'].astype(dtype='int64')
+
+    lem_dict = dict(zip(lbe_mlog.classes_, lbe_mlog.transform(lbe_mlog.classes_)))
+    impression_data['mlogId'] = impression_data['mlogId'].apply(lambda x: lem_dict.get(x, 'Unknown'))
+    impression_data = impression_data[impression_data['mlogId'] != 'Unknown']
+    impression_data['mlogId'] = impression_data['mlogId'].astype(dtype='int64')
+
+    test_data = impression_data.groupby('userId').apply(get_test_data)
+    train_data = impression_data.groupby('userId').apply(get_train_data)
+    # train_data[['userId']] = train_data[['userId']].apply(lambda x: lbe_user.transform(x))
+    # train_data[['mlogId']] = train_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
     train_data['isClick'].fillna(0)
     train_data.dropna(axis=0, how='any', inplace=False)
     train_user_data = train_data['userId'].apply(lambda x: user_data[user_data['userId'] == x].values[0]).fillna(0)
@@ -122,8 +137,8 @@ def load_all(params):
     item_train = np.stack(train_item_data.values)
     y_train = train_data["isClick"].values.tolist()
 
-    test_data[['userId']] = test_data[['userId']].apply(lambda x: lbe_user.transform(x))
-    test_data[['mlogId']] = test_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
+    # test_data[['userId']] = test_data[['userId']].apply(lambda x: lbe_user.transform(x))
+    # test_data[['mlogId']] = test_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
     test_data['isClick'].fillna(0)
     test_data.dropna(axis=0, how='any', inplace=False)
     test_user_data = test_data['userId'].apply(lambda x: user_data[user_data['userId'] == x].values[0]).fillna(0)
@@ -134,25 +149,25 @@ def load_all(params):
 
     all_user_data = np.vstack((user_train, user_test))
     all_item_data = np.vstack((item_train, item_test))
-    isclick = np.vstack((y_train, y_test))
+    isclick = y_train + y_test
 
     ''''''
     # impression_data[['userId']] = impression_data[['userId']].apply(lambda x: lbe_user.transform(x))
     # impression_data[['mlogId']] = impression_data[['mlogId']].apply(lambda x: lbe_mlog.transform(x))
     # impression_data['isClick'].fillna(0)
     # impression_data.dropna(axis=0, how='any', inplace=False)
-    #
+
     # all_user_data = impression_data['userId'].apply(
     #     lambda x: user_data[user_data['userId'] == x].values[0]).fillna(0)
     # all_item_data = impression_data['mlogId'].apply(lambda x: mlog_data[mlog_data['mlogId'] == x].values[0]).fillna(0)
-    #
+
     # all_user_data = np.stack(all_user_data.values)
     # all_item_data = np.stack(all_item_data.values)
     # isclick = impression_data["isClick"].values.tolist()
 
-    # user_train, user_test, item_train, item_test, y_train, y_test = train_test_split(all_user_data, all_item_data,
-    #                                                                                  isclick, test_size=0.33,
-    #                                                                                  random_state=42)
+    user_train, user_test, item_train, item_test, y_train, y_test = train_test_split(all_user_data, all_item_data,
+                                                                                     isclick, test_size=0.33,
+                                                                                     random_state=42)
 
     params.user_num = user_num
     params.mlog_num = mlog_num
@@ -184,7 +199,7 @@ class TrainSet(data.Dataset):
     def __getitem__(self, idx):
         user_cat = self.user_features[idx, :self.user_cat_num].astype(int)
         user_num = self.user_features[idx, self.user_cat_num:].astype(np.float32)
-        item_cat = self.item_features[idx, 0].astype(int)
+        item_cat = self.item_features[idx, :self.mlog_cat_num].astype(int)
         item_num = self.item_features[idx, self.mlog_cat_num:].astype(np.float32)
         label = self.labels[idx]
         return user_cat, user_num, item_cat, item_num, label
@@ -225,25 +240,25 @@ class TestSet(data.Dataset):
             self.item_ng = []
             for t in range(self.test_ng):
                 j = np.random.randint(self.item_id_all.shape[0])
-                while (self.user_positive_features[x,0], self.item_id_all[j,0]) in self.train_mat:
+                while (self.user_positive_features[x, 0], self.item_id_all[j, 0]) in self.train_mat:
                     j = np.random.randint(self.item_id_all.shape[0])
-                self.user_ng.append(self.user_positive_features[x,:])
-                self.item_ng.append(self.item_id_all[j,:])
+                self.user_ng.append(self.user_positive_features[x, :])
+                self.item_ng.append(self.item_id_all[j, :])
 
             labels_ps = [1]
             labels_ng = [0 for _ in range(self.test_ng)]
             if x == 0:
-                self.user_fill = np.vstack((self.user_positive_features[x,:], np.stack(self.user_ng)))
-                self.item_fill = np.vstack((self.item_positive_features[x,:], np.stack(self.item_ng)))
+                self.user_fill = np.vstack((self.user_positive_features[x, :], np.stack(self.user_ng)))
+                self.item_fill = np.vstack((self.item_positive_features[x, :], np.stack(self.item_ng)))
             else:
-                self.user_fill = np.vstack((self.user_fill, self.user_positive_features[x,:], np.stack(self.user_ng)))
-                self.item_fill = np.vstack((self.item_fill, self.item_positive_features[x,:], np.stack(self.item_ng)))
+                self.user_fill = np.vstack((self.user_fill, self.user_positive_features[x, :], np.stack(self.user_ng)))
+                self.item_fill = np.vstack((self.item_fill, self.item_positive_features[x, :], np.stack(self.item_ng)))
 
             self.labels_fill += labels_ps + labels_ng
 
     def __getitem__(self, idx):
         user_cat = self.user_fill[idx, :self.user_cat_num].astype(int)
         user_num = self.user_fill[idx, self.user_cat_num:].astype(np.float32)
-        item_cat = self.item_fill[idx, 0].astype(int)
+        item_cat = self.item_fill[idx, :self.mlog_cat_num].astype(int)
         item_num = self.item_fill[idx, self.mlog_cat_num:].astype(np.float32)
         return user_cat, user_num, item_cat, item_num

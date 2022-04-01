@@ -30,7 +30,7 @@ def metrics(model, test_loader, top_k, device):
         recommends = torch.take(
             item_cat, indices).cpu().numpy().tolist()
 
-        gt_item = item_cat[0].item()
+        gt_item = item_cat[0][0].item()
         HR.append(hit(gt_item, recommends))
         NDCG.append(ndcg(gt_item, recommends))
 
