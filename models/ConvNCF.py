@@ -1,0 +1,195 @@
+import numpy as np
+import os
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import logging
+from tqdm import trange
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
+from torch import Tensor
+from torch.nn import functional as F
+from torch.nn.modules.module import Module
+from typing import List, Tuple
+
+logger = logging.getLogger('RMD.ncf')
+
+
+def train(params, evaluate_metrics, train_loader, test_loader):
+    combined_model = Net(params, model='NeuMF-pre')
+    if torch.cuda.is_available():
+        combined_model.cuda()
+    logger.info('Training model...')
+    train_single_model(combined_model, params, evaluate_metrics, train_loader, test_loader, 'NeuMF-pre')
+    return combined_model
+
+
+def train_single_model(model, params, evaluate_metrics, train_loader, test_loader, model_name):
+    loss_fn = nn.BCEWithLogitsLoss()
+
+    if model_name == 'NeuMF-pre':
+        optimizer = optim.SGD(model.parameters(), lr=params.lr)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=params.lr)
+
+    if params.log_output:
+        writer = SummaryWriter(log_dir=os.path.join(params.plot_dir, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    count, best_hr, best_epoch, best_ndcg = 0, 0, -1, 0
+
+    for epoch in trange(params.epochs):
+        model.train()
+        test_loader.dataset.ng_sample()
+
+        for user_cat, user_num, item_cat, item_num, label in train_loader:
+            user_cat = user_cat.to(params.device)
+            user_num = user_num.to(params.device)
+            item_cat = item_cat.to(params.device)
+            item_num = item_num.to(params.device)
+            label = label.float().to(params.device)
+
+            model.zero_grad()
+            prediction = model(user_cat, user_num, item_cat, item_num)
+            loss = loss_fn(prediction, label)
+            loss.backward()
+            optimizer.step()
+            if params.log_output:
+                writer.add_scalar(f'{model_name}/loss', loss.item(), count)
+            count += 1
+
+        model.eval()
+        HR, NDCG = evaluate_metrics(model, test_loader, params.top_k, params.device)
+        if params.log_output:
+            writer.add_scalars(f'{model_name}/accuracy', {'HR': np.mean(HR),
+                                                          'NDCG': np.mean(NDCG)}, epoch)
+
+        logger.info(f'Epoch {epoch} - HR: {np.mean(HR):.3f}\tNDCG: {np.mean(NDCG):.3f}')
+
+        if HR > best_hr:
+            best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
+            torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
+        torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
+
+    if params.log_output:
+        writer.close()
+    logger.info(f"End training. Best epoch {best_epoch:03d}: HR = {best_hr:.3f}, NDCG = {best_ndcg:.3f}")
+
+
+class Net(nn.Module):
+    def __init__(self, params, model):
+        """
+		"""
+        super(Net, self).__init__()
+        self.dropout = params.dropout
+        self.model = model
+        # self.custom_embedding1 = nn.Embedding(num_class, embed_size)
+        factor_num = params.factor_num
+        num_layers = params.num_layers
+        user_num = params.user_num
+        mlog_num = params.mlog_num
+        user_int_num = params.user_int_num
+        mlog_int_num = params.mlog_int_num
+        user_cat_num = params.user_cat_num
+        mlog_cat_num = params.mlog_cat_num
+        user_cat_dims = params.user_cat_dims
+        mlog_cat_dims = params.mlog_cat_dims
+        self.embedding_size = 64
+
+        # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
+        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 5)
+        self.user_embedding3 = nn.Embedding(user_cat_dims[2], 2)
+        self.user_embedding4 = nn.Linear(user_int_num, 3)
+        # self.mlog_embedding1 = nn.Embedding(mlog_cat_dims[0], 36)
+        self.mlog_embedding2 = nn.Linear(mlog_int_num, 5)
+        self.mlog_embedding3 = nn.Embedding(mlog_cat_dims[1], 2)
+
+        self.embed_user = nn.Linear(5 + 2 + 3, self.embedding_size)
+        self.embed_item = nn.Linear(2 + 5, self.embedding_size)
+
+        predict_size = factor_num
+        self.predict_layer = nn.Linear(predict_size, 1)
+
+        # cnn setting
+        self.channel_size = 32
+        self.kernel_size = 2
+        self.strides = 2
+        self.cnn = nn.Sequential(
+            # batch_size * 1 * 64 * 64
+            nn.Conv2d(1, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 32 * 32
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 16 * 16
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 8 * 8
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 4 * 4
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 2 * 2
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 1 * 1
+        )
+
+        # fully-connected layer, used to predict
+        self.fc = nn.Linear(32, 1)
+
+        # dropout
+
+    #         self.drop_prop = 0.5
+    #         self.dropout = nn.Dropout(drop_prop)
+
+    def forward(self, user_cat, user_num, item_cat, item_num):
+        # self.custom_embedding1(user[:, 5])
+        """
+        for i in range(numerical_feature_start):
+          embed_userid = self.user_embedding1(user_cat[:, i])
+        """
+        # embed_userid = self.user_embedding1(user_cat[:, 0])
+        embed_province = self.user_embedding2(user_cat[:, 1])
+        embed_gender = self.user_embedding3(user_cat[:, 2])
+        embed_user_linear = self.user_embedding4(user_num)
+        user = torch.cat((embed_province, embed_gender, embed_user_linear), dim=1)
+
+        # embed_mlogid = self.mlog_embedding1(item_cat[:,0])
+        embed_mloggender = self.mlog_embedding3(item_cat[:, 1])
+        embed_mlog_linear = self.mlog_embedding2(item_num)
+        item = torch.cat((embed_mloggender, embed_mlog_linear), dim=1)
+
+        user_embeddings = self.embed_user(user)
+        item_embeddings = self.embed_item(item)
+
+        # concat = torch.cat((user_embeddings, item_embeddings), -1)
+
+        # prediction = self.predict_layer(concat)
+        # return prediction.view(-1)
+
+        # convert float to int
+        # user_ids = list(map(int, user_ids))
+        # item_ids = list(map(int, item_ids))
+
+        # get embeddings, simplify one-hot to index directly
+        # user_embeddings = self.P(torch.tensor(user_ids).cuda())
+        # item_embeddings = self.Q(torch.tensor(item_ids).cuda())
+
+        #         # inner product
+        #         prediction = torch.sum(torch.mul(user_embeddings, item_embeddings), dim=1)
+
+        # outer product
+        # interaction_map = torch.ger(user_embeddings, item_embeddings) # ger is 1d
+        interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
+        interaction_map = interaction_map.view((-1, 1, self.embedding_size, self.embedding_size))
+
+        # cnn
+        feature_map = self.cnn(interaction_map)  # output: batch_size * 32 * 1 * 1
+        feature_vec = feature_map.view((-1, 32))
+
+        # fc
+        prediction = self.fc(feature_vec)
+        prediction = prediction.view((-1))
+
+        #         print('is_pretrain:', is_pretrain, prediction.shape)
+        return prediction
