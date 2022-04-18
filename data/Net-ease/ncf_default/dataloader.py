@@ -31,7 +31,7 @@ def load_all(params):
     ###########
     # mlog_stats = mlog_stats.get_chunk(1000)
     # user_demographics = user_demographics.get_chunk(1000)
-    impression_data = impression_data.get_chunk(1000000)
+    impression_data = impression_data.get_chunk(50000)
     '''Impression'''
     def get_test_data(x):
         df = x.sort_values(by='impressTime', ascending=True)
