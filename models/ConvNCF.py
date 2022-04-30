@@ -38,7 +38,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
 
     for epoch in trange(params.epochs):
         model.train()
-        train_loader.dataset.ng_sample()
+        test_loader.dataset.ng_sample()
 
         for user_cat, user_num, item_cat, item_num, label in train_loader:
             user_cat = user_cat.to(params.device)

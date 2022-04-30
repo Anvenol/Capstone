@@ -31,7 +31,7 @@ def load_all(params):
     ###########
     # mlog_stats = mlog_stats.get_chunk(1000)
     # user_demographics = user_demographics.get_chunk(1000)
-    impression_data = impression_data.get_chunk(10000)
+    impression_data = impression_data.get_chunk(50000)
     '''Impression'''
     def get_test_data(x):
         df = x.sort_values(by='impressTime', ascending=True)
@@ -181,9 +181,9 @@ def load_all(params):
            y_train, y_test, params
 
 
-class TestSet(data.Dataset):
+class TrainSet(data.Dataset):
     def __init__(self, user_features, item_features, values, user_cat_num, mlog_cat_num):
-        super(TestSet, self).__init__()
+        super(TrainSet, self).__init__()
         self.user_features = user_features
         self.item_features = item_features
         self.user_cat_num = user_cat_num
@@ -198,13 +198,14 @@ class TestSet(data.Dataset):
         user_num = self.user_features[idx, self.user_cat_num:].astype(np.float32)
         item_cat = self.item_features[idx, :self.mlog_cat_num].astype(int)
         item_num = self.item_features[idx, self.mlog_cat_num:].astype(np.float32)
-        return user_cat, user_num, item_cat, item_num
+        label = self.labels[idx]
+        return user_cat, user_num, item_cat, item_num, label
 
 
-class TrainSet(data.Dataset):
+class TestSet(data.Dataset):
     def __init__(self, user_features, item_features, values, user_features_all,
                  item_features_all, values_all, user_num, mlog_num, test_ng, user_cat_num, mlog_cat_num):
-        super(TrainSet, self).__init__()
+        super(TestSet, self).__init__()
         values = np.array(values)
         self.user_features = user_features
         self.item_features = item_features
@@ -254,5 +255,4 @@ class TrainSet(data.Dataset):
         user_num = self.user_fill[idx, self.user_cat_num:].astype(np.float32)
         item_cat = self.item_fill[idx, :self.mlog_cat_num].astype(int)
         item_num = self.item_fill[idx, self.mlog_cat_num:].astype(np.float32)
-        label = self.labels_fill[idx]
-        return user_cat, user_num, item_cat, item_num, label
+        return user_cat, user_num, item_cat, item_num
