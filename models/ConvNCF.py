@@ -134,8 +134,8 @@ class Net(nn.Module):
         )
 
         # fully-connected layer, used to predict
-        self.fc1 = nn.Linear(32, 16)
-        self.fc2 = nn.Linear(16, 1)
+        self.fc1 = nn.Linear(48, 24)
+        self.fc2 = nn.Linear(24, 1)
 
         # dropout
         self.dropout1 = nn.Dropout(params.dropout)
