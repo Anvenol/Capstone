@@ -81,7 +81,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
         if val_loss < best_val_loss:
             best_val_loss, best_hr, best_ndcg, best_epoch = val_loss, HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
-            logger.info(f'Epoch {epoch} - found best! Best HR: {best_hr:.3f}, NDCG = {best_ndcg:.3f}')
+            logger.info(f'Epoch {epoch} - found best! Best HR = {best_hr:.3f}, NDCG = {best_ndcg:.3f}')
             utils.save_dict_to_json({'val_loss': val_loss, 'HR': HR, 'NDCG': NDCG},
                                     os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
 
