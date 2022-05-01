@@ -38,7 +38,9 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         writer = SummaryWriter(log_dir=os.path.join(params.plot_dir, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     count, best_hr, best_epoch, best_ndcg = 0, 0, -1, 0
 
-    loss_summary = np.zeros(par)
+    loss_summary = np.zeros(parms.num_batches * params.epochs)
+    HR_summary = np.zeros(params.epochs)
+    NDCG_summary = np.zeros(params.epochs)
 
     for epoch in trange(params.epochs):
         model.train()
