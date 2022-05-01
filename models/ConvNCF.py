@@ -70,6 +70,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         if HR > best_hr:
             best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
+            logger.info(f'Epoch {epoch} - found best!')
             utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
 
         if epoch % 100 == 99:
