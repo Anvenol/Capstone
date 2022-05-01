@@ -194,7 +194,7 @@ class TrainSet(data.Dataset):
         self.user_num = user_features[:, user_cat_num:].astype(np.float32)
         self.item_cat = item_features[:, :mlog_cat_num].astype(int)
         self.item_num = item_features[:, mlog_cat_num:].astype(np.float32)
-        self.labels = values.astype(np.float32)
+        self.labels = np.asarray(values, dtype=np.float32)
 
     def __len__(self):
         return len(self.labels)
@@ -243,17 +243,18 @@ class TestSet(data.Dataset):
             labels_ps = [1]
             labels_ng = [0 for _ in range(self.test_ng)]
             if x == 0:
-                self.user_fill = np.vstack((self.user_positive_features[x, :], np.stack(self.user_ng)))
-                self.item_fill = np.vstack((self.item_positive_features[x, :], np.stack(self.item_ng)))
+                user_fill = np.vstack((self.user_positive_features[x, :], np.stack(self.user_ng)))
+                item_fill = np.vstack((self.item_positive_features[x, :], np.stack(self.item_ng)))
             else:
-                self.user_fill = np.vstack((self.user_fill, self.user_positive_features[x, :], np.stack(self.user_ng)))
-                self.item_fill = np.vstack((self.item_fill, self.item_positive_features[x, :], np.stack(self.item_ng)))
+                user_fill = np.vstack((self.user_fill, self.user_positive_features[x, :], np.stack(self.user_ng)))
+                item_fill = np.vstack((self.item_fill, self.item_positive_features[x, :], np.stack(self.item_ng)))
+
+            self.user_cat = user_fill[:, :self.user_cat_num].astype(int)
+            self.user_num = user_fill[:, self.user_cat_num:].astype(np.float32)
+            self.item_cat = item_fill[:, :self.mlog_cat_num].astype(int)
+            self.item_num = item_fill[:, self.mlog_cat_num:].astype(np.float32)
 
             self.labels_fill += labels_ps + labels_ng
 
     def __getitem__(self, idx):
-        user_cat = self.user_fill[idx, :self.user_cat_num].astype(int)
-        user_num = self.user_fill[idx, self.user_cat_num:].astype(np.float32)
-        item_cat = self.item_fill[idx, :self.mlog_cat_num].astype(int)
-        item_num = self.item_fill[idx, self.mlog_cat_num:].astype(np.float32)
-        return user_cat, user_num, item_cat, item_num
+        return self.user_cat[idx], self.user_num[idx], self.item_cat[idx], self.item_num[idx]

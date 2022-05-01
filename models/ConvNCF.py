@@ -42,12 +42,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         model.train()
         test_loader.dataset.ng_sample()
 
-        for user_cat, user_num, item_cat, item_num, label in train_loader:
-            user_cat = user_cat.to(params.device)
-            user_num = user_num.to(params.device)
-            item_cat = item_cat.to(params.device)
-            item_num = item_num.to(params.device)
-            label = label.float().to(params.device)
+        for batch in train_loader:
+            user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
 
             model.zero_grad()
             prediction = model(user_cat, user_num, item_cat, item_num)
