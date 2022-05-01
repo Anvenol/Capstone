@@ -101,22 +101,22 @@ class Net(nn.Module):
         mlog_cat_num = params.mlog_cat_num
         user_cat_dims = params.user_cat_dims
         mlog_cat_dims = params.mlog_cat_dims
-        self.embedding_size = 64
+        self.embedding_size = 32
 
         # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
         print('user_cat_dims: ', user_cat_dims)
         print('mlog_cat_dims: ', mlog_cat_dims)
         print('user_int_num: ', user_int_num)
         print('mlog_int_num: ', mlog_int_num)
-        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 5)
-        self.user_embedding3 = nn.Embedding(user_cat_dims[2], 2)
-        self.user_embedding4 = nn.Linear(user_int_num, 3)
+        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 10)
+        self.user_embedding3 = nn.Embedding(user_cat_dims[2], 5)
+        self.user_embedding4 = nn.Linear(user_int_num, 10)
         # self.mlog_embedding1 = nn.Embedding(mlog_cat_dims[0], 36)
-        self.mlog_embedding2 = nn.Linear(mlog_int_num, 5)
-        self.mlog_embedding3 = nn.Embedding(mlog_cat_dims[1], 2)
+        self.mlog_embedding2 = nn.Linear(mlog_int_num, 20)
+        self.mlog_embedding3 = nn.Embedding(mlog_cat_dims[1], 5)
 
-        self.embed_user = nn.Linear(5 + 2 + 3, self.embedding_size)
-        self.embed_item = nn.Linear(2 + 5, self.embedding_size)
+        self.embed_user = nn.Linear(10 + 5 + 10, self.embedding_size)
+        self.embed_item = nn.Linear(20 + 5, self.embedding_size)
 
         predict_size = factor_num
 
@@ -127,9 +127,6 @@ class Net(nn.Module):
         self.cnn = nn.Sequential(
             # batch_size * 1 * 64 * 64
             nn.Conv2d(1, self.channel_size, self.kernel_size, stride=self.strides),
-            nn.ReLU(),
-            # batch_size * 32 * 32 * 32
-            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
             nn.ReLU(),
             # batch_size * 32 * 16 * 16
             nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
