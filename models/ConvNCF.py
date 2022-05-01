@@ -18,7 +18,7 @@ logger = logging.getLogger('RMD.ConvNCF')
 
 
 def train(params, evaluate_metrics, train_loader, test_loader):
-    combined_model = Net(params, model='NeuMF-pre')
+    combined_model = Net(params, model='ConvNCF')
     if torch.cuda.is_available():
         combined_model.cuda()
     logger.info('Training model...')
@@ -104,10 +104,6 @@ class Net(nn.Module):
         self.embedding_size = 32
 
         # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
-        print('user_cat_dims: ', user_cat_dims)
-        print('mlog_cat_dims: ', mlog_cat_dims)
-        print('user_int_num: ', user_int_num)
-        print('mlog_int_num: ', mlog_int_num)
         self.user_embedding2 = nn.Embedding(user_cat_dims[1], 10)
         self.user_embedding3 = nn.Embedding(user_cat_dims[2], 5)
         self.user_embedding4 = nn.Linear(user_int_num, 10)
@@ -160,8 +156,6 @@ class Net(nn.Module):
         # embed_userid = self.user_embedding1(user_cat[:, 0])
         embed_province = self.user_embedding2(user_cat[:, 1])
         embed_gender = self.user_embedding3(user_cat[:, 2])
-        print('user_num: ', user_num.shape)
-        print('item_num: ', item_num.shape)
         embed_user_linear = self.user_embedding4(user_num)
         user = torch.cat((embed_province, embed_gender, embed_user_linear), dim=1)
 

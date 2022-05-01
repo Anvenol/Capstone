@@ -12,63 +12,55 @@ from torch.nn import functional as F
 from torch.nn.modules.module import Module
 from typing import List, Tuple
 
+import utils
 
-logger = logging.getLogger('RMD.ncf')
+logger = logging.getLogger('RMD.VSN_ConvNCF')
 
 
 def train(params, evaluate_metrics, train_loader, test_loader):
-    GMF_model = Net(params, model='GMF')
-    MLP_model = Net(params, model='MLP')
-    if torch.cuda.is_available():
-        GMF_model.cuda()
-        MLP_model.cuda()
-    logger.info('Pretraining GMF only...')
-    train_single_model(GMF_model, params, evaluate_metrics, train_loader, test_loader, 'GMF')
-    logger.info('Pretraining MLP only...')
-    train_single_model(MLP_model, params, evaluate_metrics, train_loader, test_loader, 'MLP')
-
-    combined_model = Net(params, model='NeuMF-pre', GMF_model=GMF_model, MLP_model=MLP_model)
+    combined_model = Net(params, model='VSN_ConvNCF')
     if torch.cuda.is_available():
         combined_model.cuda()
-    logger.info('Training combined model...')
-    train_single_model(combined_model, params, evaluate_metrics, train_loader, test_loader, 'NeuMF-pre')
+    logger.info('Training model...')
+    train_single_model(combined_model, params, evaluate_metrics, train_loader, test_loader, 'ConvNCF')
     return combined_model
 
 
 def train_single_model(model, params, evaluate_metrics, train_loader, test_loader, model_name):
     loss_fn = nn.BCEWithLogitsLoss()
 
-    if model_name == 'NeuMF-pre':
-        optimizer = optim.SGD(model.parameters(), lr=params.lr)
-    else:
-        optimizer = optim.Adam(model.parameters(), lr=params.lr)
+    optimizer = optim.Adam(model.parameters(), lr=params.lr)
 
     if params.log_output:
         writer = SummaryWriter(log_dir=os.path.join(params.plot_dir, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     count, best_hr, best_epoch, best_ndcg = 0, 0, -1, 0
 
+    loss_summary = np.zeros(params.num_batches * params.epochs)
+    HR_summary = np.zeros(params.epochs)
+    NDCG_summary = np.zeros(params.epochs)
+
     for epoch in trange(params.epochs):
         model.train()
-        test_loader.dataset.ng_sample()
+        if epoch % 10 == 0:
+            test_loader.dataset.ng_sample()
 
-        for user_cat, user_num, item_cat, item_num, label in train_loader:
-            user_cat = user_cat.to(params.device)
-            user_num = user_num.to(params.device)
-            item_cat = item_cat.to(params.device)
-            item_num = item_num.to(params.device)
-            label = label.float().to(params.device)
+        for batch in train_loader:
+            user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
 
             model.zero_grad()
             prediction = model(user_cat, user_num, item_cat, item_num)
             loss = loss_fn(prediction, label)
             loss.backward()
             optimizer.step()
+            loss_summary[count] = loss.item()
             if params.log_output:
                 writer.add_scalar(f'{model_name}/loss', loss.item(), count)
             count += 1
 
         model.eval()
         HR, NDCG = evaluate_metrics(model, test_loader, params.top_k, params.device)
+        HR_summary[epoch] = HR
+        NDCG_summary[epoch] = NDCG
         if params.log_output:
             writer.add_scalars(f'{model_name}/accuracy', {'HR': np.mean(HR),
                                                           'NDCG': np.mean(NDCG)}, epoch)
@@ -78,7 +70,15 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         if HR > best_hr:
             best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
-        torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
+            logger.info(f'Epoch {epoch} - found best!')
+            utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
+
+        if epoch % 100 == 99:
+            utils.plot_all_loss(loss_summary[:count], 'loss', plot_title='loss_summary',
+                                location=os.path.join(params.model_dir, 'figures'))
+            utils.plot_all_epoch(HR_summary[:epoch+1], NDCG_summary[:epoch+1], 'metrics', plot_title='metrics_summary',
+                                location=os.path.join(params.model_dir, 'figures'))
+        # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
         writer.close()
@@ -86,19 +86,10 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
 
 
 class Net(nn.Module):
-    def __init__(self, params, model, GMF_model=None, MLP_model=None):
-        """
-		Args:
-		    paams: dictionary of all parameters
-            model: 'MLP', 'GMF', 'NeuMF-end', and 'NeuMF-pre'
-            GMF_model: pre-trained GMF weights
-            MLP_model: pre-trained MLP weights
-		"""
+    def __init__(self, params, model):
         super(Net, self).__init__()
         self.dropout = params.dropout
         self.model = model
-        self.GMF_model = GMF_model
-        self.MLP_model = MLP_model
         # self.custom_embedding1 = nn.Embedding(num_class, embed_size)
         factor_num = params.factor_num
         num_layers = params.num_layers
@@ -110,88 +101,56 @@ class Net(nn.Module):
         mlog_cat_num = params.mlog_cat_num
         user_cat_dims = params.user_cat_dims
         mlog_cat_dims = params.mlog_cat_dims
+        self.embedding_size = 32
 
         # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
-        # self.user_embedding2 = nn.Embedding(user_cat_dims[1], 5)
-        # self.user_embedding3 = nn.Embedding(user_cat_dims[2], 2)
-        # self.user_embedding4 = nn.Linear(user_int_num,3)
+        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 10)
+        self.user_embedding3 = nn.Embedding(user_cat_dims[2], 5)
+        self.user_embedding4 = nn.Linear(user_int_num, 10)
         # self.mlog_embedding1 = nn.Embedding(mlog_cat_dims[0], 36)
-        # self.mlog_embedding2 = nn.Linear(mlog_int_num,5)
-        # self.mlog_embedding3 = nn.Embedding(mlog_cat_dims[1], 2)
+        self.mlog_embedding2 = nn.Linear(mlog_int_num, 20)
+        self.mlog_embedding3 = nn.Embedding(mlog_cat_dims[1], 5)
 
-        # self.embed_user_GMF = nn.Linear(5+2+3, factor_num)
-        # self.embed_item_GMF = nn.Linear(2+5, factor_num)
-        # self.embed_user_MLP = nn.Linear(
-        #     5+2+3, factor_num * (2 ** (num_layers - 1)))
-        # self.embed_item_MLP = nn.Linear(
-        #     2+5, factor_num * (2 ** (num_layers - 1)))
+        print('user_cat_num: ', user_cat_num)
+        print('user_cat_dims: ', user_cat_dims)
+        self.embed_user_MLP = VSN(d_hidden=self.embedding_size, n_vars=user_int_num, cat_vars=user_cat_num - 1,
+                                  cat_dims=user_cat_dims[1:])
+        self.embed_item_MLP = VSN(d_hidden=self.embedding_size, n_vars=mlog_int_num, cat_vars=mlog_cat_num - 1,
+                                  cat_dims=mlog_cat_dims)
 
-        # __init__(self, d_hidden: int, n_vars: int, cat_vars: int, cat_dims: List[int], dropout: float = 0.0)
-        self.embed_user_GMF = VSN(d_hidden=factor_num, n_vars=user_int_num, cat_vars=user_cat_num, cat_dims=user_cat_dims)
-        self.embed_item_GMF = VSN(d_hidden=factor_num, n_vars=mlog_int_num, cat_vars=mlog_cat_num, cat_dims=mlog_cat_dims)
-        self.embed_user_MLP = VSN(d_hidden=factor_num * (2 ** (num_layers - 1)), n_vars=user_int_num, cat_vars=user_cat_num, cat_dims=user_cat_dims)
-        self.embed_item_MLP = VSN(d_hidden=factor_num * (2 ** (num_layers - 1)), n_vars=mlog_int_num, cat_vars=mlog_cat_num, cat_dims=mlog_cat_dims)
 
-        MLP_modules = []
-        for i in range(num_layers):
-            input_size = factor_num * (2 ** (num_layers - i))
-            MLP_modules.append(nn.Dropout(p=self.dropout))
-            MLP_modules.append(nn.Linear(input_size, input_size // 2))
-            MLP_modules.append(nn.ReLU())
-        self.MLP_layers = nn.Sequential(*MLP_modules)
+        predict_size = factor_num
 
-        if self.model in ['MLP', 'GMF']:
-            predict_size = factor_num
-        else:
-            predict_size = factor_num * 2
-        self.predict_layer = nn.Linear(predict_size, 1)
+        # cnn setting
+        self.channel_size = 32
+        self.kernel_size = 2
+        self.strides = 2
+        self.cnn = nn.Sequential(
+            # batch_size * 1 * 64 * 64
+            nn.Conv2d(1, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 16 * 16
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 8 * 8
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 4 * 4
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 2 * 2
+            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
+            nn.ReLU(),
+            # batch_size * 32 * 1 * 1
+        )
 
-        self._init_weight_()
+        # fully-connected layer, used to predict
+        self.fc = nn.Linear(32, 1)
 
-    def _init_weight_(self):
-        """ We leave the weights initialization here. """
-        if not self.model == 'NeuMF-pre':
-            # nn.init.normal_(self.embed_user_GMF.weight, std=0.01)
-            # nn.init.normal_(self.embed_user_MLP.weight, std=0.01)
-            # nn.init.normal_(self.embed_item_GMF.weight, std=0.01)
-            # nn.init.normal_(self.embed_item_MLP.weight, std=0.01)
+        # dropout
 
-            for m in self.MLP_layers:
-                if isinstance(m, nn.Linear):
-                    nn.init.xavier_uniform_(m.weight)
-            nn.init.kaiming_uniform_(self.predict_layer.weight,
-                                     a=1, nonlinearity='sigmoid')
-
-            for m in self.modules():
-                if isinstance(m, nn.Linear) and m.bias is not None:
-                    m.bias.data.zero_()
-        # else:
-        #     # embedding layers
-        #     self.embed_user_GMF.weight.data.copy_(
-        #         self.GMF_model.embed_user_GMF.weight)
-        #     self.embed_item_GMF.weight.data.copy_(
-        #         self.GMF_model.embed_item_GMF.weight)
-        #     self.embed_user_MLP.weight.data.copy_(
-        #         self.MLP_model.embed_user_MLP.weight)
-        #     self.embed_item_MLP.weight.data.copy_(
-        #         self.MLP_model.embed_item_MLP.weight)
-
-        #     # mlp layers
-        #     for (m1, m2) in zip(
-        #             self.MLP_layers, self.MLP_model.MLP_layers):
-        #         if isinstance(m1, nn.Linear) and isinstance(m2, nn.Linear):
-        #             m1.weight.data.copy_(m2.weight)
-        #             m1.bias.data.copy_(m2.bias)
-
-        #     # predict layers
-        #     predict_weight = torch.cat([
-        #         self.GMF_model.predict_layer.weight,
-        #         self.MLP_model.predict_layer.weight], dim=1)
-        #     precit_bias = self.GMF_model.predict_layer.bias + \
-        #                   self.MLP_model.predict_layer.bias
-
-        #     self.predict_layer.weight.data.copy_(0.5 * predict_weight)
-        #     self.predict_layer.bias.data.copy_(0.5 * precit_bias)
+    #         self.drop_prop = 0.5
+    #         self.dropout = nn.Dropout(drop_prop)
 
     def forward(self, user_cat, user_num, item_cat, item_num):
         # self.custom_embedding1(user[:, 5])
@@ -200,149 +159,48 @@ class Net(nn.Module):
           embed_userid = self.user_embedding1(user_cat[:, i])
         """
         # embed_userid = self.user_embedding1(user_cat[:, 0])
-        # embed_province = self.user_embedding2(user_cat[:, 1])
-        # embed_gender = self.user_embedding3(user_cat[:, 2])
-        # embed_user_linear = self.user_embedding4(user_num)
-        # user = torch.cat(( embed_province, embed_gender, embed_user_linear), dim=1)
+        embed_province = self.user_embedding2(user_cat[:, 1])
+        embed_gender = self.user_embedding3(user_cat[:, 2])
+        print('user_num: ', user_num.shape)
+        print('item_num: ', item_num.shape)
+        embed_user_linear = self.user_embedding4(user_num)
+        user = torch.cat((embed_province, embed_gender, embed_user_linear), dim=1)
 
         # embed_mlogid = self.mlog_embedding1(item_cat[:,0])
-        # embed_mloggender = self.mlog_embedding3(item_cat[:,1])
-        # embed_mlog_linear = self.mlog_embedding2(item_num)
-        # item = torch.cat(( embed_mloggender, embed_mlog_linear), dim=1)
+        embed_mloggender = self.mlog_embedding3(item_cat[:, 1])
+        embed_mlog_linear = self.mlog_embedding2(item_num)
+        item = torch.cat((embed_mloggender, embed_mlog_linear), dim=1)
 
-        if not self.model == 'MLP':
-            # embed_user_GMF = self.embed_user_GMF(user)
-            # embed_item_GMF = self.embed_item_GMF(item)
-            embed_user_GMF = self.embed_user_GMF.forward(variables=user_num,cat_variables=user_cat)[0]
-            embed_item_GMF = self.embed_item_GMF.forward(variables=item_num,cat_variables=item_cat)[0]
-            output_GMF = embed_user_GMF * embed_item_GMF
-        if not self.model == 'GMF':
-            # embed_user_MLP = self.embed_user_MLP(user)
-            # embed_item_MLP = self.embed_item_MLP(item)
-            embed_user_MLP = self.embed_user_MLP.forward(variables=user_num,cat_variables=user_cat)[0]
-            embed_item_MLP = self.embed_item_MLP.forward(variables=item_num,cat_variables=item_cat)[0]
-            interaction = torch.cat((embed_user_MLP, embed_item_MLP), -1)
-            output_MLP = self.MLP_layers(interaction)
+        user_embeddings = self.embed_user(user)
+        item_embeddings = self.embed_item(item)
 
-        if self.model == 'GMF':
-            concat = output_GMF
-        elif self.model == 'MLP':
-            concat = output_MLP
-        else:
-            concat = torch.cat((output_GMF, output_MLP), -1)
+        # concat = torch.cat((user_embeddings, item_embeddings), -1)
 
-        prediction = self.predict_layer(concat)
-        return prediction.view(-1)
+        # return prediction.view(-1)
 
-class LayerNorm(nn.Module):
-    def __init__(self, hidden_size, eps=1e-6):
-        """ Construct a layernorm module in the T5 style
-            No bias and no substraction of mean.
-        """
-        super().__init__()
-        self.weight = nn.Parameter(torch.ones(hidden_size))
-        self.variance_epsilon = eps
+        # convert float to int
+        # user_ids = list(map(int, user_ids))
+        # item_ids = list(map(int, item_ids))
 
-        # init
-        self.weight.data.fill_(1.0)
+        # get embeddings, simplify one-hot to index directly
+        # user_embeddings = self.P(torch.tensor(user_ids).cuda())
+        # item_embeddings = self.Q(torch.tensor(item_ids).cuda())
 
-    def forward(self, x):
-        # layer norm should always be calculated in float32
-        variance = x.to(torch.float32).pow(2).mean(-1, keepdim=True)
-        x = x / torch.sqrt(variance + self.variance_epsilon)
+        #         # inner product
+        #         prediction = torch.sum(torch.mul(user_embeddings, item_embeddings), dim=1)
 
-        if self.weight.dtype == torch.float16:
-            x = x.to(torch.float16)
-        return self.weight * x
+        # outer product
+        # interaction_map = torch.ger(user_embeddings, item_embeddings) # ger is 1d
+        interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
+        interaction_map = interaction_map.view((-1, 1, self.embedding_size, self.embedding_size))
 
+        # cnn
+        feature_map = self.cnn(interaction_map)  # output: batch_size * 32 * 1 * 1
+        feature_vec = feature_map.view((-1, 32))
 
-class GRN(Module):
+        # fc
+        prediction = self.fc(feature_vec)
+        prediction = prediction.view((-1))
 
-    def __init__(self, d_input, d_hidden, dropout, d_output=None):
-        super(GRN, self).__init__()
-        if d_output is None:
-            d_output = d_hidden
-            self.skip = nn.Identity()
-        else:
-            self.skip = nn.Linear(d_input, d_output, bias=True)
-        self.linear_elu = nn.Linear(d_input, d_hidden, bias=True)
-        self.linear_pre_glu = nn.Linear(d_hidden, d_hidden, bias=True)
-        self.dropout = nn.Dropout(dropout)
-        self.linear_post_glu = nn.Linear(d_hidden, 2 * d_output, bias=True)
-        self.layer_norm = LayerNorm(d_output, eps=1e-6)
-
-    def forward(self, alpha, context=None):
-
-        if context is not None:
-            together = torch.cat((alpha, context), dim=-1)
-        else:
-            together = alpha
-        post_elu = F.elu(self.linear_elu(together))
-        pre_glu = self.dropout(self.linear_pre_glu(post_elu))
-        return self.layer_norm(F.glu(self.linear_post_glu(pre_glu)) + self.skip(alpha))
-
-
-# optional dropout and Gated Liner Unit followed by add and norm
-class AddNorm(Module):
-    def __init__(self, d_hidden, dropout):
-        super(AddNorm, self).__init__()
-        self.linear_glu = nn.Linear(d_hidden, 2 * d_hidden, bias=True)
-        self.dropout = nn.Dropout(dropout)
-        self.layer_norm = LayerNorm(d_hidden, eps=1e-6)
-
-    def forward(self, x, residual):
-        post_glu = F.glu(self.linear_glu(self.dropout(x)))
-        return self.layer_norm(post_glu + residual)
-
-
-class VSN(Module):
-    def __init__(self, d_hidden: int, n_vars: int, cat_vars: int, cat_dims: List[int], dropout: float = 0.0):
-        super(VSN, self).__init__()
-        self.d_hidden = d_hidden
-        self.n_vars = n_vars  # number of numerical features
-        self.cat_vars = cat_vars  # number of categorical features
-        self.num_embeds = nn.ModuleList(
-            nn.Linear(
-                in_features=1,
-                out_features=self.d_hidden,
-            ) for _ in range(self.n_vars)
-        )
-        self.cat_embeds = nn.ModuleList(
-            nn.Embedding(
-                num_embeddings=cat_dims[i],
-                embedding_dim=self.d_hidden,
-            ) for i in range(self.cat_vars)
-        )
-        self.weight_network = GRN(
-            d_input=self.d_hidden * (self.n_vars + self.cat_vars),
-            d_hidden=self.d_hidden,
-            dropout=dropout,
-            d_output=self.n_vars + self.cat_vars,
-        )
-        self.variable_network = nn.ModuleList(
-            GRN(
-                d_input=self.d_hidden,
-                d_hidden=self.d_hidden,
-                dropout=dropout,
-            ) for _ in range(self.n_vars + self.cat_vars)
-        )
-
-    def forward(self, variables: Tensor, cat_variables: Tensor) -> Tuple[Tensor, Tensor]:
-        if variables.shape[-1] != self.n_vars:
-            raise ValueError(f'Expected {self.n_vars} numerical variables, but {variables.shape[-1]} given.')
-        if cat_variables.shape[-1] != self.cat_vars:
-            raise ValueError(f'Expected {self.cat_vars} categorical variables, but {cat_variables.shape[-1]} given.')
-
-        num_embeds = [self.num_embeds[i](variables[:, i:i+1]) for i in range(self.n_vars)]
-        cat_embeds = [self.cat_embeds[i](cat_variables[:, i:i+1].squeeze(1)) for i in range(self.cat_vars)]
-        all_embeds = num_embeds + cat_embeds
-        flatten = torch.cat(all_embeds, dim=-1)  # [B, d_hidden * (n_vars + cat_vars)]
-        weight = self.weight_network(flatten).unsqueeze(dim=-2)  # [B, 1, n_vars + cat_vars]
-        weight = torch.softmax(weight, dim=-1)
-        # [B, d_hidden, n_vars + cat_vars]
-        var_encodings = torch.stack(
-            tensors=[net(v) for v, net in zip(all_embeds, self.variable_network)],
-            dim=-1
-        )
-        var_encodings = torch.sum(var_encodings * weight, dim=-1)
-        return var_encodings, weight
+        #         print('is_pretrain:', is_pretrain, prediction.shape)
+        return prediction
