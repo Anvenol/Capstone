@@ -108,7 +108,8 @@ def main():
     # Perform hypersearch over parameters listed below
     search_params = {
         # "dropout": [0, 0.1, 0.2, 0.3],
-        "num_ng": [4, 8, 12]
+        "num_ng": [4, 8, 6, 10, 1, 12],
+        "dropout": [0.1, 0, 0.2, 0.3]
     }
 
     keys = sorted(search_params.keys())
