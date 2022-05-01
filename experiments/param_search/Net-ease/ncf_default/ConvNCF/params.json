@@ -5,5 +5,6 @@
   "epochs": 5000,
   "num_layers": 3,
   "num_ng": 4,
-  "factor_num": 32
+  "factor_num": 32,
+  "dropout_feature": 0
 }
