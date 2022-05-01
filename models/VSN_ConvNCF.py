@@ -149,21 +149,6 @@ class Net(nn.Module):
         self.dropout2 = nn.Dropout(params.dropout)
 
     def forward(self, user_cat, user_num, item_cat, item_num):
-        """
-        for i in range(numerical_feature_start):
-          embed_userid = self.user_embedding1(user_cat[:, i])
-        """
-        # embed_userid = self.user_embedding1(user_cat[:, 0])
-        embed_province = self.user_embedding2(user_cat[:, 1])
-        embed_gender = self.user_embedding3(user_cat[:, 2])
-        embed_user_linear = self.user_embedding4(user_num)
-        user = torch.cat((embed_province, embed_gender, embed_user_linear), dim=1)
-
-        # embed_mlogid = self.mlog_embedding1(item_cat[:,0])
-        embed_mloggender = self.mlog_embedding3(item_cat[:, 1])
-        embed_mlog_linear = self.mlog_embedding2(item_num)
-        item = torch.cat((embed_mloggender, embed_mlog_linear), dim=1)
-
         user_embeddings = self.embed_user(self.dropout1(user))
         item_embeddings = self.embed_item(self.dropout2(item))
 
