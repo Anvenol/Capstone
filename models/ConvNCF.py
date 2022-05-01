@@ -75,7 +75,10 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
             utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
 
-
+        utils.plot_all_loss(loss_summary, 'loss', plot_title='loss_summary',
+                            location=os.path.join(params.model_dir, 'figures'))
+        utils.plot_all_epoch(HR_summary, NDCG_summary, 'metrics', plot_title='metrics_summary',
+                            location=os.path.join(params.model_dir, 'figures'))
         # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
