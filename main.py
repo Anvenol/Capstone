@@ -85,8 +85,8 @@ if __name__ == '__main__':
                                        user_cat_num=params.user_cat_num, mlog_cat_num=params.mlog_cat_num)
     train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8,
                                    drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=params.batch_size * 2,
-                            sampler=RandomSampler(val_dataset), num_workers=8, drop_last=True)
+    val_loader = data.DataLoader(val_dataset, batch_size=params.batch_size * 2,
+                                 sampler=RandomSampler(val_dataset), num_workers=8, drop_last=True)
     test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
     params.num_batches = len(train_dataset) // params.batch_size
     params.num_val_batches = len(val_dataset) // (params.batch_size * 2)

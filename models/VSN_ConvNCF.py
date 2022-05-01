@@ -17,12 +17,12 @@ import utils
 logger = logging.getLogger('RMD.VSN_ConvNCF')
 
 
-def train(params, evaluate_metrics, train_loader, test_loader):
+def train(params, evaluate_metrics, train_loader, val_loader, test_loader):
     combined_model = Net(params, model='VSN_ConvNCF')
     if torch.cuda.is_available():
         combined_model.cuda()
     logger.info('Training model...')
-    train_single_model(combined_model, params, evaluate_metrics, train_loader, test_loader, 'ConvNCF')
+    train_single_model(combined_model, params, evaluate_metrics, train_loader, val_loader, test_loader, 'VSN_ConvNCF')
     return combined_model
 
 
@@ -33,9 +33,10 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
 
     if params.log_output:
         writer = SummaryWriter(log_dir=os.path.join(params.plot_dir, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    count, best_hr, best_epoch, best_ndcg = 0, 0, -1, 0
+    count, best_val_loss, best_hr, best_epoch, best_ndcg = 0, 1e8, 0, -1, 0
 
     loss_summary = np.zeros(params.num_batches * params.epochs)
+    val_loss_summary = np.zeros(params.epochs)
     HR_summary = np.zeros(params.epochs)
     NDCG_summary = np.zeros(params.epochs)
 
@@ -58,6 +59,16 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
             count += 1
 
         model.eval()
+        with torch.no_grad():
+            loss_val_epoch = np.zeros(params.num_val_batches)
+            for val_count, batch in enumerate(val_loader):
+                user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
+                prediction = model(user_cat, user_num, item_cat, item_num)
+                loss_val_epoch[val_count] = loss_fn(prediction, label).item()
+
+            val_loss = np.mean(loss_val_epoch)
+            val_loss_summary[epoch] = val_loss
+
         HR, NDCG = evaluate_metrics(model, test_loader, params.top_k, params.device)
         HR_summary[epoch] = HR
         NDCG_summary[epoch] = NDCG
@@ -65,19 +76,21 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
             writer.add_scalars(f'{model_name}/accuracy', {'HR': np.mean(HR),
                                                           'NDCG': np.mean(NDCG)}, epoch)
 
-        logger.info(f'Epoch {epoch} - HR: {np.mean(HR):.3f}\tNDCG: {np.mean(NDCG):.3f}')
+        logger.info(f'Epoch {epoch} - val_loss: {val_loss}, HR: {np.mean(HR):.3f}\tNDCG: {np.mean(NDCG):.3f}')
 
-        if HR > best_hr:
-            best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
+        if val_loss < best_val_loss:
+            best_val_loss, best_hr, best_ndcg, best_epoch = val_loss, HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
             logger.info(f'Epoch {epoch} - found best!')
-            utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
+            utils.save_dict_to_json({'val_loss': val_loss, 'HR': HR, 'NDCG': NDCG},
+                                    os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
 
         if epoch % 100 == 99:
-            utils.plot_all_loss(loss_summary[:count], 'loss', plot_title='loss_summary',
+            utils.plot_all_loss(loss_summary[:count], 'loss', plot_title=params.plot_title,
                                 location=os.path.join(params.model_dir, 'figures'))
-            utils.plot_all_epoch(HR_summary[:epoch+1], NDCG_summary[:epoch+1], 'metrics', plot_title='metrics_summary',
-                                location=os.path.join(params.model_dir, 'figures'))
+            utils.plot_all_epoch(val_loss_summary[:epoch+1], HR_summary[:epoch+1], NDCG_summary[:epoch+1],
+                                 'metrics', plot_title=params.plot_title,
+                                 location=os.path.join(params.model_dir, 'figures'))
         # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
