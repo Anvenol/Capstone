@@ -164,11 +164,9 @@ class Net(nn.Module):
         if self.dropout_feature == 0:
             user_embeddings = self.embed_user(self.dropout1(user))
             item_embeddings = self.embed_item(self.dropout2(item))
-            print('no dropout')
         else:
             user_embeddings = self.dropout3(self.embed_user(self.dropout1(user)))
             item_embeddings = self.dropout4(self.embed_item(self.dropout2(item)))
-            print('dropout')
 
         # outer product
         interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
