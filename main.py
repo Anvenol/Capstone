@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     train_dataset = data_loader.TrainSet(user_train, item_train, y_train, user_cat_num=params.user_cat_num,
                                          mlog_cat_num=params.mlog_cat_num)
-    val_dataset = data_loader.ValSet(train_dataset.user_cat_va, train_dataset.user_num_val,
+    val_dataset = data_loader.ValSet(train_dataset.user_cat_val, train_dataset.user_num_val,
                                      train_dataset.item_cat_val, train_dataset.item_num_val, train_dataset.labels_val)
     test_dataset = data_loader.TestSet(user_test, item_test, y_test, all_user_data, all_item_data, isclick,
                                        user_num=params.user_num, mlog_num=params.mlog_num, test_ng=params.test_num_ng,
