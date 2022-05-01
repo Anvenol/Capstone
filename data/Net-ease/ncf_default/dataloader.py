@@ -32,6 +32,8 @@ def load_all(params):
     # mlog_stats = mlog_stats.get_chunk(1000)
     # user_demographics = user_demographics.get_chunk(1000)
     impression_data = impression_data.get_chunk(50000)
+    stringcols = impression_data.select_dtypes(include='object').columns
+    impression_data[stringcols] = impression_data[stringcols].astype(str)
     '''Impression'''
     def get_test_data(x):
         df = x.sort_values(by='impressTime', ascending=True)
@@ -55,6 +57,8 @@ def load_all(params):
     # total_num['clickto_viewcomment'] = total_num['isViewComment_total'] / total_num['isClick_total']
     # user_data = pd.merge(user_demographics, total_num, on='userId', how='left')
     user_data = user_demographics
+    stringcols = user_data.select_dtypes(include='object').columns
+    user_data[stringcols] = user_data[stringcols].astype(str)
     user_data[['age', 'gender']] = user_data[['gender', 'age']]
     user_data.rename(columns={'age': 'gender', 'gender': 'age'}, inplace=True)
     user_data.loc[:, 'gender'] = user_data.loc[:, 'gender'].fillna('unknown')
@@ -68,6 +72,8 @@ def load_all(params):
     # cre_num2 = creator_stats.groupby('creatorId').mean()['PushlishMlogCnt'].reset_index().rename(columns={'PushlishMlogCnt': 'PushlishMlogCnt_mean'})
     # mlog_data = pd.merge(mlog_data, cre_num1, on='creatorId', how='left')
     # mlog_data = pd.merge(mlog_data, cre_num2, on='creatorId', how='left')
+    stringcols = mlog_data.select_dtypes(include='object').columns
+    mlog_data[stringcols] = mlog_data[stringcols].astype(str)
     mlog_data.drop(columns=['creatorId', 'songId', 'artistId', 'contentId'], inplace=True)
     mlog_data[['dt', 'gender']] = mlog_data[['gender', 'dt']]
     mlog_data.rename(columns={'dt': 'gender', 'gender': 'dt'}, inplace=True)

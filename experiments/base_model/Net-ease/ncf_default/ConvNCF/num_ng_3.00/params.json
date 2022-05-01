@@ -1,0 +1,18 @@
+{
+    "data_dir": "raw_data/Net-ease",
+    "creator_demographics": "creator_demographics.csv",
+    "creator_stats": "creator_stats.csv",
+    "impression_data": "impression_data.csv",
+    "mlog_demographics": "mlog_demographics.csv",
+    "mlog_stats": "mlog_stats.csv",
+    "user_demographics": "user_demographics.csv",
+    "test_num_ng": 99,
+    "top_k": 10,
+    "lr": 0.5,
+    "dropout": 0.0,
+    "batch_size": 2048,
+    "epochs": 5000,
+    "num_layers": 3,
+    "num_ng": 3,
+    "factor_num": 32
+}
