@@ -190,22 +190,17 @@ def load_all(params):
 class TrainSet(data.Dataset):
     def __init__(self, user_features, item_features, values, user_cat_num, mlog_cat_num):
         super(TrainSet, self).__init__()
-        self.user_features = user_features
-        self.item_features = item_features
-        self.user_cat_num = user_cat_num
-        self.mlog_cat_num = mlog_cat_num
-        self.labels = values
+        self.user_cat = user_features[:, :user_cat_num].astype(int)
+        self.user_num = user_features[:, user_cat_num:].astype(np.float32)
+        self.item_cat = item_features[:, :mlog_cat_num].astype(int)
+        self.item_num = item_features[:, mlog_cat_num:].astype(np.float32)
+        self.labels = values.astype(np.float32)
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        user_cat = self.user_features[idx, :self.user_cat_num].astype(int)
-        user_num = self.user_features[idx, self.user_cat_num:].astype(np.float32)
-        item_cat = self.item_features[idx, :self.mlog_cat_num].astype(int)
-        item_num = self.item_features[idx, self.mlog_cat_num:].astype(np.float32)
-        label = self.labels[idx]
-        return user_cat, user_num, item_cat, item_num, label
+        return self.user_cat[idx], self.user_num[idx], self.item_cat[idx], self.item_num[idx], self.labels[idx]
 
 
 class TestSet(data.Dataset):
