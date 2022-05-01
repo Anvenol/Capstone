@@ -107,7 +107,7 @@ def main():
 
     # Perform hypersearch over parameters listed below
     search_params = {
-        "dropout_feature": [0, 1],
+        "dropout_feature": [1],
         "num_ng": [4, 8, 6, 10, 1, 12],
         "dropout": [0.1, 0, 0.2, 0.3]
     }
