@@ -189,7 +189,7 @@ class Net(nn.Module):
         feature_vec = feature_map.view((-1, 32))
 
         # fc
-        prediction = self.fc(feature_vec)
+        prediction = self.fc(feature_vec + user_embeddings + item_embeddings)
         prediction = prediction.view((-1))
 
         #         print('is_pretrain:', is_pretrain, prediction.shape)
