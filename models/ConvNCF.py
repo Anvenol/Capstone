@@ -115,7 +115,6 @@ class Net(nn.Module):
         self.embed_item = nn.Linear(2 + 5, self.embedding_size)
 
         predict_size = factor_num
-        self.predict_layer = nn.Linear(predict_size, 1)
 
         # cnn setting
         self.channel_size = 32
@@ -160,6 +159,8 @@ class Net(nn.Module):
         # embed_userid = self.user_embedding1(user_cat[:, 0])
         embed_province = self.user_embedding2(user_cat[:, 1])
         embed_gender = self.user_embedding3(user_cat[:, 2])
+        print('user_num: ', user_num.shape)
+        print('item_num: ', item_num.shape)
         embed_user_linear = self.user_embedding4(user_num)
         user = torch.cat((embed_province, embed_gender, embed_user_linear), dim=1)
 
@@ -173,7 +174,6 @@ class Net(nn.Module):
 
         # concat = torch.cat((user_embeddings, item_embeddings), -1)
 
-        # prediction = self.predict_layer(concat)
         # return prediction.view(-1)
 
         # convert float to int

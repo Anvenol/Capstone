@@ -40,18 +40,20 @@ def train(params, evaluate_metrics, train_loader, test_loader):
 def train_single_model(model, params, evaluate_metrics, train_loader, test_loader, model_name):
     loss_fn = nn.BCEWithLogitsLoss()
 
-    if model_name == 'NeuMF-pre':
-        optimizer = optim.SGD(model.parameters(), lr=params.lr)
-    else:
-        optimizer = optim.Adam(model.parameters(), lr=params.lr)
+    optimizer = optim.Adam(model.parameters(), lr=params.lr)
 
     if params.log_output:
         writer = SummaryWriter(log_dir=os.path.join(params.plot_dir, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     count, best_hr, best_epoch, best_ndcg = 0, 0, -1, 0
 
+    loss_summary = np.zeros(params.num_batches * params.epochs)
+    HR_summary = np.zeros(params.epochs)
+    NDCG_summary = np.zeros(params.epochs)
+
     for epoch in trange(params.epochs):
         model.train()
-        test_loader.dataset.ng_sample()
+        if epoch % 10 == 0:
+            test_loader.dataset.ng_sample()
 
         for batch in train_loader:
             user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
@@ -61,12 +63,15 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
             loss = loss_fn(prediction, label)
             loss.backward()
             optimizer.step()
+            loss_summary[count] = loss.item()
             if params.log_output:
                 writer.add_scalar(f'{model_name}/loss', loss.item(), count)
             count += 1
 
         model.eval()
         HR, NDCG = evaluate_metrics(model, test_loader, params.top_k, params.device)
+        HR_summary[epoch] = HR
+        NDCG_summary[epoch] = NDCG
         if params.log_output:
             writer.add_scalars(f'{model_name}/accuracy', {'HR': np.mean(HR),
                                                           'NDCG': np.mean(NDCG)}, epoch)
@@ -76,7 +81,14 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         if HR > best_hr:
             best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
+            logger.info(f'Epoch {epoch} - found best!')
             utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
+
+        if epoch % 100 == 99:
+            utils.plot_all_loss(loss_summary[:count], f'{model_name}_loss', plot_title='loss_summary',
+                                location=os.path.join(params.model_dir, 'figures'))
+            utils.plot_all_epoch(HR_summary[:epoch+1], NDCG_summary[:epoch+1], f'{model_name}_metrics',
+                                 plot_title='metrics_summary', location=os.path.join(params.model_dir, 'figures'))
         # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
