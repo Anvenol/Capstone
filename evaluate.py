@@ -19,19 +19,19 @@ def metrics(model, test_loader, top_k, device):
     HR, NDCG = [], []
 
     # print('evaluation starts here')
+    with torch.no_grad():
+        for user_cat, user_num, item_cat, item_num in test_loader:
+            user_cat = user_cat.to(device)
+            user_num = user_num.to(device)
+            item_cat = item_cat.to(device)
+            item_num = item_num.to(device)
+            predictions = model(user_cat, user_num, item_cat, item_num)
+            _, indices = torch.topk(predictions, top_k)
+            recommends = torch.take(
+                item_cat, indices).cpu().numpy().tolist()
 
-    for user_cat, user_num, item_cat, item_num in test_loader:
-        user_cat = user_cat.to(device)
-        user_num = user_num.to(device)
-        item_cat = item_cat.to(device)
-        item_num = item_num.to(device)
-        predictions = model(user_cat, user_num, item_cat, item_num)
-        _, indices = torch.topk(predictions, top_k)
-        recommends = torch.take(
-            item_cat, indices).cpu().numpy().tolist()
-
-        gt_item = item_cat[0][0].item()
-        HR.append(hit(gt_item, recommends))
-        NDCG.append(ndcg(gt_item, recommends))
+            gt_item = item_cat[0][0].item()
+            HR.append(hit(gt_item, recommends))
+            NDCG.append(ndcg(gt_item, recommends))
 
     return np.mean(HR), np.mean(NDCG)

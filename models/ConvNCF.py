@@ -103,14 +103,14 @@ class Net(nn.Module):
         self.embedding_size = 32
 
         # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
-        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 10)
+        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 7)
         self.user_embedding3 = nn.Embedding(user_cat_dims[2], 5)
         self.user_embedding4 = nn.Linear(user_int_num, 10)
         # self.mlog_embedding1 = nn.Embedding(mlog_cat_dims[0], 36)
         self.mlog_embedding2 = nn.Linear(mlog_int_num, 20)
         self.mlog_embedding3 = nn.Embedding(mlog_cat_dims[1], 5)
 
-        self.embed_user = nn.Linear(10 + 5 + 10, self.embedding_size)
+        self.embed_user = nn.Linear(7 + 5 + 10, self.embedding_size)
         self.embed_item = nn.Linear(20 + 5, self.embedding_size)
 
         # cnn setting
@@ -137,8 +137,8 @@ class Net(nn.Module):
         )
 
         # fully-connected layer, used to predict
-        self.fc1 = nn.Linear(64, 32)
-        self.fc2 = nn.Linear(32, 1)
+        self.fc1 = nn.Linear(32, 16)
+        self.fc2 = nn.Linear(16, 1)
 
         # dropout
         self.dropout1 = nn.Dropout(params.dropout)
@@ -173,7 +173,7 @@ class Net(nn.Module):
         feature_vec = feature_map.view((-1, 32))
 
         # fc
-        prediction = self.fc1(torch.cat((feature_vec, self.dropout3(user_embeddings + item_embeddings)), dim=1))
+        prediction = self.fc1(feature_vec + self.dropout3(user_embeddings + item_embeddings))
         prediction = self.fc2(prediction).view((-1))
 
         return prediction
