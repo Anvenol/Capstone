@@ -103,7 +103,6 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.dropout = params.dropout
         self.model = model
-        # self.custom_embedding1 = nn.Embedding(num_class, embed_size)
         factor_num = params.factor_num
         num_layers = params.num_layers
         user_num = params.user_num
@@ -114,33 +113,20 @@ class Net(nn.Module):
         mlog_cat_num = params.mlog_cat_num
         user_cat_dims = params.user_cat_dims
         mlog_cat_dims = params.mlog_cat_dims
-        self.embedding_size = 32
+        self.embedding_size = 16
 
-        # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
-        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 10)
-        self.user_embedding3 = nn.Embedding(user_cat_dims[2], 5)
-        self.user_embedding4 = nn.Linear(user_int_num, 10)
-        # self.mlog_embedding1 = nn.Embedding(mlog_cat_dims[0], 36)
-        self.mlog_embedding2 = nn.Linear(mlog_int_num, 20)
-        self.mlog_embedding3 = nn.Embedding(mlog_cat_dims[1], 5)
-
-        print('user_cat_num: ', user_cat_num)
-        print('user_cat_dims: ', user_cat_dims)
-        self.embed_user_MLP = VSN(d_hidden=self.embedding_size, n_vars=user_int_num, cat_vars=user_cat_num - 1,
-                                  cat_dims=user_cat_dims[1:])
-        self.embed_item_MLP = VSN(d_hidden=self.embedding_size, n_vars=mlog_int_num, cat_vars=mlog_cat_num - 1,
-                                  cat_dims=mlog_cat_dims[1:])
+        self.embed_user = VSN(d_hidden=self.embedding_size, n_vars=user_int_num, cat_vars=user_cat_num - 1,
+                              cat_dims=user_cat_dims[1:])
+        self.embed_item = VSN(d_hidden=self.embedding_size, n_vars=mlog_int_num, cat_vars=mlog_cat_num - 1,
+                              cat_dims=mlog_cat_dims[1:])
 
         # cnn setting
-        self.channel_size = 32
+        self.channel_size = 16
         self.kernel_size = 2
         self.strides = 2
         self.cnn = nn.Sequential(
-            # batch_size * 1 * 64 * 64
+            # batch_size * 1 * 16 * 16
             nn.Conv2d(1, self.channel_size, self.kernel_size, stride=self.strides),
-            nn.ReLU(),
-            # batch_size * 32 * 16 * 16
-            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
             nn.ReLU(),
             # batch_size * 32 * 8 * 8
             nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
@@ -155,15 +141,14 @@ class Net(nn.Module):
         )
 
         # fully-connected layer, used to predict
-        self.fc = nn.Linear(32, 1)
+        self.fc1 = nn.Linear(48, 24)
+        self.fc2 = nn.Linear(24, 1)
 
         # dropout
-
-    #         self.drop_prop = 0.5
-    #         self.dropout = nn.Dropout(drop_prop)
+        self.dropout1 = nn.Dropout(params.dropout)
+        self.dropout2 = nn.Dropout(params.dropout)
 
     def forward(self, user_cat, user_num, item_cat, item_num):
-        # self.custom_embedding1(user[:, 5])
         """
         for i in range(numerical_feature_start):
           embed_userid = self.user_embedding1(user_cat[:, i])
@@ -171,8 +156,6 @@ class Net(nn.Module):
         # embed_userid = self.user_embedding1(user_cat[:, 0])
         embed_province = self.user_embedding2(user_cat[:, 1])
         embed_gender = self.user_embedding3(user_cat[:, 2])
-        print('user_num: ', user_num.shape)
-        print('item_num: ', item_num.shape)
         embed_user_linear = self.user_embedding4(user_num)
         user = torch.cat((embed_province, embed_gender, embed_user_linear), dim=1)
 
@@ -184,33 +167,16 @@ class Net(nn.Module):
         user_embeddings = self.embed_user(self.dropout1(user))
         item_embeddings = self.embed_item(self.dropout2(item))
 
-        # concat = torch.cat((user_embeddings, item_embeddings), -1)
-
-        # return prediction.view(-1)
-
-        # convert float to int
-        # user_ids = list(map(int, user_ids))
-        # item_ids = list(map(int, item_ids))
-
-        # get embeddings, simplify one-hot to index directly
-        # user_embeddings = self.P(torch.tensor(user_ids).cuda())
-        # item_embeddings = self.Q(torch.tensor(item_ids).cuda())
-
-        #         # inner product
-        #         prediction = torch.sum(torch.mul(user_embeddings, item_embeddings), dim=1)
-
         # outer product
-        # interaction_map = torch.ger(user_embeddings, item_embeddings) # ger is 1d
         interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
         interaction_map = interaction_map.view((-1, 1, self.embedding_size, self.embedding_size))
 
         # cnn
-        feature_map = self.cnn(interaction_map)  # output: batch_size * 32 * 1 * 1
-        feature_vec = feature_map.view((-1, 32))
+        feature_map = self.cnn(interaction_map)  # output: batch_size * 16 * 1 * 1
+        feature_vec = feature_map.view((-1, self.channel_size))
 
         # fc
-        prediction = self.fc(feature_vec)
-        prediction = prediction.view((-1))
+        prediction = self.fc1(torch.cat((feature_vec, user_embeddings, item_embeddings), dim=1))
+        prediction = self.fc2(prediction).view((-1))
 
-        #         print('is_pretrain:', is_pretrain, prediction.shape)
         return prediction

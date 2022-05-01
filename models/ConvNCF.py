@@ -26,7 +26,7 @@ def train(params, evaluate_metrics, train_loader, val_loader, test_loader):
     return combined_model
 
 
-def train_single_model(model, params, evaluate_metrics, train_loader, test_loader, model_name):
+def train_single_model(model, params, evaluate_metrics, train_loader, val_loader, test_loader, model_name):
     loss_fn = nn.BCEWithLogitsLoss()
 
     optimizer = optim.Adam(model.parameters(), lr=params.lr)
