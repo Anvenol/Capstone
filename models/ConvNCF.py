@@ -14,7 +14,7 @@ from typing import List, Tuple
 
 import utils
 
-logger = logging.getLogger('RMD.ncf')
+logger = logging.getLogger('RMD.ConvNCF')
 
 
 def train(params, evaluate_metrics, train_loader, test_loader):
@@ -37,6 +37,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
     if params.log_output:
         writer = SummaryWriter(log_dir=os.path.join(params.plot_dir, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     count, best_hr, best_epoch, best_ndcg = 0, 0, -1, 0
+
+    loss_summary = np.zeros(par)
 
     for epoch in trange(params.epochs):
         model.train()
@@ -66,7 +68,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
             best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
             utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
-        torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
+        # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
         writer.close()
@@ -75,8 +77,6 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
 
 class Net(nn.Module):
     def __init__(self, params, model):
-        """
-		"""
         super(Net, self).__init__()
         self.dropout = params.dropout
         self.model = model

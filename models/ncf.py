@@ -12,6 +12,8 @@ from torch.nn import functional as F
 from torch.nn.modules.module import Module
 from typing import List, Tuple
 
+import utils
+
 
 logger = logging.getLogger('RMD.ncf')
 
@@ -51,12 +53,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         model.train()
         test_loader.dataset.ng_sample()
 
-        for user_cat, user_num, item_cat, item_num, label in train_loader:
-            user_cat = user_cat.to(params.device)
-            user_num = user_num.to(params.device)
-            item_cat = item_cat.to(params.device)
-            item_num = item_num.to(params.device)
-            label = label.float().to(params.device)
+        for batch in train_loader:
+            user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
 
             model.zero_grad()
             prediction = model(user_cat, user_num, item_cat, item_num)
@@ -78,7 +76,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         if HR > best_hr:
             best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
-        torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
+            utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
+        # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
         writer.close()

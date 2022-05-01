@@ -81,6 +81,7 @@ if __name__ == '__main__':
                                        user_num=params.user_num, mlog_num=params.mlog_num, test_ng=params.test_num_ng, user_cat_num=params.user_cat_num, mlog_cat_num=params.mlog_cat_num)
     train_loader = data.DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=8)
     test_loader = data.DataLoader(test_dataset, batch_size=params.test_num_ng + 1, shuffle=False, num_workers=0)
+    params.num_batches = len(train_dataset)
 
     # use GPU if available
     cuda_exist = torch.cuda.is_available()

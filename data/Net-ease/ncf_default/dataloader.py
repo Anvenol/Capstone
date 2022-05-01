@@ -243,16 +243,16 @@ class TestSet(data.Dataset):
             labels_ps = [1]
             labels_ng = [0 for _ in range(self.test_ng)]
             if x == 0:
-                user_fill = np.vstack((self.user_positive_features[x, :], np.stack(self.user_ng)))
-                item_fill = np.vstack((self.item_positive_features[x, :], np.stack(self.item_ng)))
+                self.user_fill = np.vstack((self.user_positive_features[x, :], np.stack(self.user_ng)))
+                self.item_fill = np.vstack((self.item_positive_features[x, :], np.stack(self.item_ng)))
             else:
-                user_fill = np.vstack((self.user_fill, self.user_positive_features[x, :], np.stack(self.user_ng)))
-                item_fill = np.vstack((self.item_fill, self.item_positive_features[x, :], np.stack(self.item_ng)))
+                self.user_fill = np.vstack((self.user_fill, self.user_positive_features[x, :], np.stack(self.user_ng)))
+                self.item_fill = np.vstack((self.item_fill, self.item_positive_features[x, :], np.stack(self.item_ng)))
 
-            self.user_cat = user_fill[:, :self.user_cat_num].astype(int)
-            self.user_num = user_fill[:, self.user_cat_num:].astype(np.float32)
-            self.item_cat = item_fill[:, :self.mlog_cat_num].astype(int)
-            self.item_num = item_fill[:, self.mlog_cat_num:].astype(np.float32)
+            self.user_cat = self.user_fill[:, :self.user_cat_num].astype(int)
+            self.user_num = self.user_fill[:, self.user_cat_num:].astype(np.float32)
+            self.item_cat = self.item_fill[:, :self.mlog_cat_num].astype(int)
+            self.item_num = self.item_fill[:, self.mlog_cat_num:].astype(np.float32)
 
             self.labels_fill += labels_ps + labels_ng
 
