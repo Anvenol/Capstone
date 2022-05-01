@@ -146,7 +146,7 @@ def plot_all_loss(loss_summary, save_name, plot_title, location='./figures/'):
     plt.close()
 
 
-def plot_all_epoch(variable1, variable2, save_name, plot_title, location='./figures/', plot_start=0):
+def plot_all_epoch(variable1, variable2, variable3, save_name, plot_title, location='./figures/', plot_start=0):
     num_samples = variable1.shape[0]
     if num_samples > plot_start:
         x = np.arange(start=plot_start, stop=num_samples)
@@ -156,8 +156,8 @@ def plot_all_epoch(variable1, variable2, save_name, plot_title, location='./figu
         line1, = ax1.plot(x, variable1[plot_start:num_samples])
         ax2 = ax1.twinx()
         line2, = ax2.plot(x, variable2[plot_start:num_samples], c='r')
-        plt.legend((line1, line2), ("HR", "NDCG"))
-        ax1.set_ylabel("HR")
-        ax2.set_ylabel("NDCG")
+        plt.legend((line1, line2), ("val_loss", "HR"))
+        ax1.set_ylabel("val_loss")
+        ax2.set_ylabel("HR")
         f.savefig(os.path.join(location, save_name + '_summary.png'))
         plt.close()

@@ -36,6 +36,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
     count, best_val_loss, best_hr, best_epoch, best_ndcg = 0, 0, -1, 0
 
     loss_summary = np.zeros(params.num_batches * params.epochs)
+    val_loss_summary = np.zeros(params.epochs)
     HR_summary = np.zeros(params.epochs)
     NDCG_summary = np.zeros(params.epochs)
 
@@ -66,6 +67,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
                 loss_val_epoch[val_count] = loss_fn(prediction, label).item()
 
             val_loss = np.mean(loss_val_epoch)
+            val_loss_summary[epoch] = val_loss
 
         HR, NDCG = evaluate_metrics(model, test_loader, params.top_k, params.device)
         HR_summary[epoch] = HR
@@ -84,10 +86,11 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
                                     os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
 
         if epoch % 100 == 99:
-            utils.plot_all_loss(loss_summary[:count], 'loss', plot_title='loss_summary',
+            utils.plot_all_loss(loss_summary[:count], 'loss', plot_title=params.plot_title,
                                 location=os.path.join(params.model_dir, 'figures'))
-            utils.plot_all_epoch(HR_summary[:epoch+1], NDCG_summary[:epoch+1], 'metrics', plot_title='metrics_summary',
-                                location=os.path.join(params.model_dir, 'figures'))
+            utils.plot_all_epoch(val_loss_summary[:epoch+1], HR_summary[:epoch+1], NDCG_summary[:epoch+1],
+                                 'metrics', plot_title=params.plot_title,
+                                 location=os.path.join(params.model_dir, 'figures'))
         # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
