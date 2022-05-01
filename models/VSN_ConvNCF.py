@@ -116,10 +116,7 @@ class Net(nn.Module):
         self.embed_user_MLP = VSN(d_hidden=self.embedding_size, n_vars=user_int_num, cat_vars=user_cat_num - 1,
                                   cat_dims=user_cat_dims[1:])
         self.embed_item_MLP = VSN(d_hidden=self.embedding_size, n_vars=mlog_int_num, cat_vars=mlog_cat_num - 1,
-                                  cat_dims=mlog_cat_dims)
-
-
-        predict_size = factor_num
+                                  cat_dims=mlog_cat_dims[1:])
 
         # cnn setting
         self.channel_size = 32
@@ -171,8 +168,8 @@ class Net(nn.Module):
         embed_mlog_linear = self.mlog_embedding2(item_num)
         item = torch.cat((embed_mloggender, embed_mlog_linear), dim=1)
 
-        user_embeddings = self.embed_user(user)
-        item_embeddings = self.embed_item(item)
+        user_embeddings = self.embed_user(self.dropout1(user))
+        item_embeddings = self.embed_item(self.dropout2(item))
 
         # concat = torch.cat((user_embeddings, item_embeddings), -1)
 

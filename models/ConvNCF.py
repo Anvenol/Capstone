@@ -114,8 +114,6 @@ class Net(nn.Module):
         self.embed_user = nn.Linear(10 + 5 + 10, self.embedding_size)
         self.embed_item = nn.Linear(20 + 5, self.embedding_size)
 
-        predict_size = factor_num
-
         # cnn setting
         self.channel_size = 32
         self.kernel_size = 2
@@ -143,9 +141,8 @@ class Net(nn.Module):
         self.fc = nn.Linear(32, 1)
 
         # dropout
-
-    #         self.drop_prop = 0.5
-    #         self.dropout = nn.Dropout(drop_prop)
+        self.dropout1 = nn.Dropout(params.dropout)
+        self.dropout2 = nn.Dropout(params.dropout)
 
     def forward(self, user_cat, user_num, item_cat, item_num):
         # self.custom_embedding1(user[:, 5])
@@ -164,8 +161,8 @@ class Net(nn.Module):
         embed_mlog_linear = self.mlog_embedding2(item_num)
         item = torch.cat((embed_mloggender, embed_mlog_linear), dim=1)
 
-        user_embeddings = self.embed_user(user)
-        item_embeddings = self.embed_item(item)
+        user_embeddings = self.embed_user(self.dropout1(user))
+        item_embeddings = self.embed_item(self.dropout2(item))
 
         # concat = torch.cat((user_embeddings, item_embeddings), -1)
 
