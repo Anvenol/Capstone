@@ -100,7 +100,7 @@ class Net(nn.Module):
         mlog_cat_num = params.mlog_cat_num
         user_cat_dims = params.user_cat_dims
         mlog_cat_dims = params.mlog_cat_dims
-        self.embedding_size = 32
+        self.embedding_size = 16
 
         # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
         self.user_embedding2 = nn.Embedding(user_cat_dims[1], 7)
@@ -118,11 +118,8 @@ class Net(nn.Module):
         self.kernel_size = 2
         self.strides = 2
         self.cnn = nn.Sequential(
-            # batch_size * 1 * 32 * 32
+            # batch_size * 1 * 16 * 16
             nn.Conv2d(1, self.channel_size, self.kernel_size, stride=self.strides),
-            nn.ReLU(),
-            # batch_size * 32 * 16 * 16
-            nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
             nn.ReLU(),
             # batch_size * 32 * 8 * 8
             nn.Conv2d(self.channel_size, self.channel_size, self.kernel_size, stride=self.strides),
@@ -173,7 +170,7 @@ class Net(nn.Module):
         feature_vec = feature_map.view((-1, 32))
 
         # fc
-        prediction = self.fc1(feature_vec + self.dropout3(user_embeddings + item_embeddings))
+        prediction = self.fc1(torch.cat((feature_vec, self.dropout3(user_embeddings + item_embeddings)), dim=1))
         prediction = self.fc2(prediction).view((-1))
 
         return prediction
