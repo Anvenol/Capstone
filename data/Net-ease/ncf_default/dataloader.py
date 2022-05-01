@@ -190,11 +190,34 @@ def load_all(params):
 class TrainSet(data.Dataset):
     def __init__(self, user_features, item_features, values, user_cat_num, mlog_cat_num):
         super(TrainSet, self).__init__()
-        self.user_cat = user_features[:, :user_cat_num].astype(int)
-        self.user_num = user_features[:, user_cat_num:].astype(np.float32)
-        self.item_cat = item_features[:, :mlog_cat_num].astype(int)
-        self.item_num = item_features[:, mlog_cat_num:].astype(np.float32)
+        split_indices = np.random.choice([True, False], user_features.shape[0], p=(0.9, 0.1))
+        self.user_cat = user_features[split_indices, :user_cat_num].astype(int)
+        self.user_num = user_features[split_indices, user_cat_num:].astype(np.float32)
+        self.item_cat = item_features[split_indices, :mlog_cat_num].astype(int)
+        self.item_num = item_features[split_indices, mlog_cat_num:].astype(np.float32)
         self.labels = np.asarray(values, dtype=np.float32)
+        self.user_cat_val = user_features[~split_indices, :user_cat_num].astype(int)
+        self.user_num_val = user_features[~split_indices, user_cat_num:].astype(np.float32)
+        self.item_cat_val = item_features[~split_indices, :mlog_cat_num].astype(int)
+        self.item_num_val = item_features[~split_indices, mlog_cat_num:].astype(np.float32)
+        self.labels_val = self.labels[~split_indices]
+        self.labels = self.labels[split_indices]
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        return self.user_cat[idx], self.user_num[idx], self.item_cat[idx], self.item_num[idx], self.labels[idx]
+
+
+class ValSet(data.Dataset):
+    def __init__(self, user_cat, user_num, item_cat, item_num, labels):
+        super(ValSet, self).__init__()
+        self.user_cat = user_cat
+        self.user_num = user_num
+        self.item_cat = item_cat
+        self.item_num = item_num
+        self.labels = labels
 
     def __len__(self):
         return len(self.labels)
