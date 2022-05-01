@@ -90,7 +90,6 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.dropout = params.dropout
         self.model = model
-        # self.custom_embedding1 = nn.Embedding(num_class, embed_size)
         factor_num = params.factor_num
         num_layers = params.num_layers
         user_num = params.user_num
@@ -119,7 +118,7 @@ class Net(nn.Module):
         self.kernel_size = 2
         self.strides = 2
         self.cnn = nn.Sequential(
-            # batch_size * 1 * 64 * 64
+            # batch_size * 1 * 32 * 32
             nn.Conv2d(1, self.channel_size, self.kernel_size, stride=self.strides),
             nn.ReLU(),
             # batch_size * 32 * 16 * 16
@@ -164,23 +163,7 @@ class Net(nn.Module):
         user_embeddings = self.embed_user(self.dropout1(user))
         item_embeddings = self.embed_item(self.dropout2(item))
 
-        # concat = torch.cat((user_embeddings, item_embeddings), -1)
-
-        # return prediction.view(-1)
-
-        # convert float to int
-        # user_ids = list(map(int, user_ids))
-        # item_ids = list(map(int, item_ids))
-
-        # get embeddings, simplify one-hot to index directly
-        # user_embeddings = self.P(torch.tensor(user_ids).cuda())
-        # item_embeddings = self.Q(torch.tensor(item_ids).cuda())
-
-        #         # inner product
-        #         prediction = torch.sum(torch.mul(user_embeddings, item_embeddings), dim=1)
-
         # outer product
-        # interaction_map = torch.ger(user_embeddings, item_embeddings) # ger is 1d
         interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
         interaction_map = interaction_map.view((-1, 1, self.embedding_size, self.embedding_size))
 
@@ -192,5 +175,4 @@ class Net(nn.Module):
         prediction = self.fc(feature_vec + user_embeddings + item_embeddings)
         prediction = prediction.view((-1))
 
-        #         print('is_pretrain:', is_pretrain, prediction.shape)
         return prediction
