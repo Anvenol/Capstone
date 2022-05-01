@@ -137,14 +137,15 @@ class Net(nn.Module):
         )
 
         # fully-connected layer, used to predict
-        self.fc = nn.Linear(32, 1)
+        self.fc1 = nn.Linear(64, 32)
+        self.fc2 = nn.Linear(32, 1)
 
         # dropout
         self.dropout1 = nn.Dropout(params.dropout)
         self.dropout2 = nn.Dropout(params.dropout)
+        self.dropout3 = nn.Dropout(params.dropout)
 
     def forward(self, user_cat, user_num, item_cat, item_num):
-        # self.custom_embedding1(user[:, 5])
         """
         for i in range(numerical_feature_start):
           embed_userid = self.user_embedding1(user_cat[:, i])
@@ -172,7 +173,7 @@ class Net(nn.Module):
         feature_vec = feature_map.view((-1, 32))
 
         # fc
-        prediction = self.fc(feature_vec + user_embeddings + item_embeddings)
-        prediction = prediction.view((-1))
+        prediction = self.fc1(torch.cat((feature_vec, self.dropout3(user_embeddings + item_embeddings)), dim=1))
+        prediction = self.fc2(prediction).view((-1))
 
         return prediction
