@@ -42,6 +42,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
     HR_summary = np.zeros(params.epochs)
     NDCG_summary = np.zeros(params.epochs)
 
+    current_index = 0
     for epoch in trange(params.epochs):
         model.train()
         test_loader.dataset.ng_sample()
@@ -54,12 +55,15 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
             loss = loss_fn(prediction, label)
             loss.backward()
             optimizer.step()
+            loss_summary[current_index] = loss.item()
             if params.log_output:
                 writer.add_scalar(f'{model_name}/loss', loss.item(), count)
             count += 1
 
         model.eval()
         HR, NDCG = evaluate_metrics(model, test_loader, params.top_k, params.device)
+        HR_summary[epoch] = HR
+        NDCG_summary[epoch] = NDCG
         if params.log_output:
             writer.add_scalars(f'{model_name}/accuracy', {'HR': np.mean(HR),
                                                           'NDCG': np.mean(NDCG)}, epoch)
@@ -70,6 +74,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
             best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
             utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
+
+
         # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:

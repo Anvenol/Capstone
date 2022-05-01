@@ -120,3 +120,49 @@ def model_list():
     files = os.listdir('./models')
     files = [name.replace('.py', '') for name in files if name.endswith('.py')]
     return files
+
+
+def plot_all_loss(loss_summary, save_name, plot_title, location='./figures/'):
+    gaussian_window_size = 3
+    loss_cum = cum_by_axis1(loss_summary)
+    loss_cum = gaussian_filter1d(loss_cum, gaussian_window_size, axis=0)
+    num_loss = loss_cum.shape[1]
+    color_list = ['b', 'r', 'g', 'm', 'y']
+    loss_list = ['loss_1', 'loss_2', 'loss_3', 'loss_4', 'loss_5']
+    f = plt.figure()
+    plt.title(plot_title)
+    num_batches = loss_cum.shape[0]
+    if num_batches > 10000:
+        pack_size = num_batches // 10000
+        x = np.arange(num_batches)[0:num_batches:pack_size]
+        plt.fill_between(x, 0, loss_cum[0:num_batches:pack_size, 0], color='b', alpha=0.2, label='loss_1')
+        for i in range(num_loss - 1):
+            plt.fill_between(x, loss_cum[0:num_batches:pack_size, i], loss_cum[0:num_batches:pack_size, i + 1],
+                             color=color_list[i + 1], alpha=0.2, label=loss_list[i + 1])
+    else:
+        x = np.arange(num_batches)
+        plt.fill_between(x, 0, loss_cum[:, 0], color='b', alpha=0.2, label='loss_1')
+        for i in range(num_loss - 1):
+            plt.fill_between(x, loss_cum[:, i], loss_cum[:, i + 1], color=color_list[i + 1], alpha=0.2,
+                             label=loss_list[i + 1])
+    plt.yscale('log')
+    plt.legend()
+    f.savefig(os.path.join(location, save_name + '_summary.png'))
+    plt.close()
+
+
+def plot_all_epoch(variable1, variable2, save_name, plot_title, location='./figures/', plot_start=0):
+    num_samples = variable1.shape[0]
+    if num_samples > plot_start:
+        x = np.arange(start=plot_start, stop=num_samples)
+        f = plt.figure()
+        plt.title(plot_title)
+        ax1 = plt.gca()
+        line1, = ax1.plot(x, variable1[plot_start:num_samples])
+        ax2 = ax1.twinx()
+        line2, = ax2.plot(x, variable2[plot_start:num_samples], c='r')
+        plt.legend((line1, line2), ("Test metrics", "Validation metrics"))
+        ax1.set_ylabel("Test")
+        ax2.set_ylabel("Validation")
+        f.savefig(os.path.join(location, save_name + '_summary.png'))
+        plt.close()
