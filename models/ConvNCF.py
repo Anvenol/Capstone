@@ -140,10 +140,6 @@ class Net(nn.Module):
         # dropout
         self.dropout1 = nn.Dropout(params.dropout)
         self.dropout2 = nn.Dropout(params.dropout)
-        self.dropout3 = nn.Dropout(params.dropout)
-        self.dropout4 = nn.Dropout(params.dropout)
-
-        self.dropout_feature = params.dropout_feature
 
     def forward(self, user_cat, user_num, item_cat, item_num):
         """
@@ -161,12 +157,8 @@ class Net(nn.Module):
         embed_mlog_linear = self.mlog_embedding2(item_num)
         item = torch.cat((embed_mloggender, embed_mlog_linear), dim=1)
 
-        if self.dropout_feature == 0:
-            user_embeddings = self.embed_user(self.dropout1(user))
-            item_embeddings = self.embed_item(self.dropout2(item))
-        else:
-            user_embeddings = self.dropout3(self.embed_user(self.dropout1(user)))
-            item_embeddings = self.dropout4(self.embed_item(self.dropout2(item)))
+        user_embeddings = self.embed_user(self.dropout1(user))
+        item_embeddings = self.embed_item(self.dropout2(item))
 
         # outer product
         interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
