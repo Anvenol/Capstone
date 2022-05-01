@@ -114,7 +114,7 @@ class Net(nn.Module):
         self.embed_item = nn.Linear(20 + 5, self.embedding_size)
 
         # cnn setting
-        self.channel_size = 32
+        self.channel_size = 16
         self.kernel_size = 2
         self.strides = 2
         self.cnn = nn.Sequential(
@@ -166,11 +166,11 @@ class Net(nn.Module):
         interaction_map = interaction_map.view((-1, 1, self.embedding_size, self.embedding_size))
 
         # cnn
-        feature_map = self.cnn(interaction_map)  # output: batch_size * 32 * 1 * 1
-        feature_vec = feature_map.view((-1, 32))
+        feature_map = self.cnn(interaction_map)  # output: batch_size * 16 * 1 * 1
+        feature_vec = feature_map.view((-1, self.channel_size))
 
         # fc
-        prediction = self.fc1(torch.cat((feature_vec, self.dropout3(user_embeddings + item_embeddings)), dim=1))
+        prediction = self.fc1(torch.cat((feature_vec, user_embeddings, item_embeddings), dim=1))
         prediction = self.fc2(prediction).view((-1))
 
         return prediction
