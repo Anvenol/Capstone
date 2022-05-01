@@ -167,6 +167,9 @@ class Net(nn.Module):
         user_embeddings = self.embed_user(self.dropout1(user))
         item_embeddings = self.embed_item(self.dropout2(item))
 
+        user_embeddings = self.embed_user.forward(variables=user_num, cat_variables=user_cat[:, 1:])[0]
+        item_embeddings = self.embed_item.forward(variables=item_num, cat_variables=item_cat[:, 1].unsqueeze(-1))[0]
+
         # outer product
         interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
         interaction_map = interaction_map.view((-1, 1, self.embedding_size, self.embedding_size))
@@ -180,3 +183,117 @@ class Net(nn.Module):
         prediction = self.fc2(prediction).view((-1))
 
         return prediction
+
+
+class LayerNorm(nn.Module):
+    def __init__(self, hidden_size, eps=1e-6):
+        """ Construct a layernorm module in the T5 style
+            No bias and no substraction of mean.
+        """
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.variance_epsilon = eps
+
+        # init
+        self.weight.data.fill_(1.0)
+
+    def forward(self, x):
+        # layer norm should always be calculated in float32
+        variance = x.to(torch.float32).pow(2).mean(-1, keepdim=True)
+        x = x / torch.sqrt(variance + self.variance_epsilon)
+
+        if self.weight.dtype == torch.float16:
+            x = x.to(torch.float16)
+        return self.weight * x
+
+
+class GRN(Module):
+
+    def __init__(self, d_input, d_hidden, dropout, d_output=None):
+        super(GRN, self).__init__()
+        if d_output is None:
+            d_output = d_hidden
+            self.skip = nn.Identity()
+        else:
+            self.skip = nn.Linear(d_input, d_output, bias=True)
+        self.linear_elu = nn.Linear(d_input, d_hidden, bias=True)
+        self.linear_pre_glu = nn.Linear(d_hidden, d_hidden, bias=True)
+        self.dropout = nn.Dropout(dropout)
+        self.linear_post_glu = nn.Linear(d_hidden, 2 * d_output, bias=True)
+        self.layer_norm = LayerNorm(d_output, eps=1e-6)
+
+    def forward(self, alpha, context=None):
+
+        if context is not None:
+            together = torch.cat((alpha, context), dim=-1)
+        else:
+            together = alpha
+        post_elu = F.elu(self.linear_elu(together))
+        pre_glu = self.dropout(self.linear_pre_glu(post_elu))
+        return self.layer_norm(F.glu(self.linear_post_glu(pre_glu)) + self.skip(alpha))
+
+
+# optional dropout and Gated Liner Unit followed by add and norm
+class AddNorm(Module):
+    def __init__(self, d_hidden, dropout):
+        super(AddNorm, self).__init__()
+        self.linear_glu = nn.Linear(d_hidden, 2 * d_hidden, bias=True)
+        self.dropout = nn.Dropout(dropout)
+        self.layer_norm = LayerNorm(d_hidden, eps=1e-6)
+
+    def forward(self, x, residual):
+        post_glu = F.glu(self.linear_glu(self.dropout(x)))
+        return self.layer_norm(post_glu + residual)
+
+
+class VSN(Module):
+    def __init__(self, d_hidden: int, n_vars: int, cat_vars: int, cat_dims: List[int], dropout: float = 0.0):
+        super(VSN, self).__init__()
+        self.d_hidden = d_hidden
+        self.n_vars = n_vars  # number of numerical features
+        self.cat_vars = cat_vars  # number of categorical features
+        self.num_embeds = nn.ModuleList(
+            nn.Linear(
+                in_features=1,
+                out_features=self.d_hidden,
+            ) for _ in range(self.n_vars)
+        )
+        self.cat_embeds = nn.ModuleList(
+            nn.Embedding(
+                num_embeddings=cat_dims[i],
+                embedding_dim=self.d_hidden,
+            ) for i in range(self.cat_vars)
+        )
+        self.weight_network = GRN(
+            d_input=self.d_hidden * (self.n_vars + self.cat_vars),
+            d_hidden=self.d_hidden,
+            dropout=dropout,
+            d_output=self.n_vars + self.cat_vars,
+        )
+        self.variable_network = nn.ModuleList(
+            GRN(
+                d_input=self.d_hidden,
+                d_hidden=self.d_hidden,
+                dropout=dropout,
+            ) for _ in range(self.n_vars + self.cat_vars)
+        )
+
+    def forward(self, variables: Tensor, cat_variables: Tensor) -> Tuple[Tensor, Tensor]:
+        if variables.shape[-1] != self.n_vars:
+            raise ValueError(f'Expected {self.n_vars} numerical variables, but {variables.shape[-1]} given.')
+        if cat_variables.shape[-1] != self.cat_vars:
+            raise ValueError(f'Expected {self.cat_vars} categorical variables, but {cat_variables.shape[-1]} given.')
+
+        num_embeds = [self.num_embeds[i](variables[:, i:i+1]) for i in range(self.n_vars)]
+        cat_embeds = [self.cat_embeds[i](cat_variables[:, i:i+1].squeeze(1)) for i in range(self.cat_vars)]
+        all_embeds = num_embeds + cat_embeds
+        flatten = torch.cat(all_embeds, dim=-1)  # [B, d_hidden * (n_vars + cat_vars)]
+        weight = self.weight_network(flatten).unsqueeze(dim=-2)  # [B, 1, n_vars + cat_vars]
+        weight = torch.softmax(weight, dim=-1)
+        # [B, d_hidden, n_vars + cat_vars]
+        var_encodings = torch.stack(
+            tensors=[net(v) for v, net in zip(all_embeds, self.variable_network)],
+            dim=-1
+        )
+        var_encodings = torch.sum(var_encodings * weight, dim=-1)
+        return var_encodings, weight
