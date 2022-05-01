@@ -104,6 +104,10 @@ class Net(nn.Module):
         self.embedding_size = 64
 
         # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
+        print('user_cat_dims: ', user_cat_dims)
+        print('mlog_cat_dims: ', mlog_cat_dims)
+        print('user_int_num: ', user_int_num)
+        print('mlog_int_num: ', mlog_int_num)
         self.user_embedding2 = nn.Embedding(user_cat_dims[1], 5)
         self.user_embedding3 = nn.Embedding(user_cat_dims[2], 2)
         self.user_embedding4 = nn.Linear(user_int_num, 3)
