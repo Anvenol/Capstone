@@ -12,6 +12,8 @@ from torch.nn import functional as F
 from torch.nn.modules.module import Module
 from typing import List, Tuple
 
+import utils
+
 logger = logging.getLogger('RMD.ncf')
 
 
@@ -67,6 +69,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
         if HR > best_hr:
             best_hr, best_ndcg, best_epoch = HR, NDCG, epoch
             torch.save(model, os.path.join(params.model_dir, f'{model_name}_best.pth'))
+            utils.save_dict_to_json({"HR": HR, "NDCG": NDCG}, os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
         torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
