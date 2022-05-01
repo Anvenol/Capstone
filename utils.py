@@ -4,7 +4,11 @@ import sys
 import tqdm
 import logging
 from scipy.ndimage import gaussian_filter1d
+import matplotlib
+import matplotlib.pyplot as plt
 
+matplotlib.use('Agg')
+matplotlib.rcParams['savefig.dpi'] = 300  # Uncomment for higher plot resolutions
 
 class Params:
     """

@@ -22,17 +22,14 @@ def train(params, evaluate_metrics, train_loader, test_loader):
     if torch.cuda.is_available():
         combined_model.cuda()
     logger.info('Training model...')
-    train_single_model(combined_model, params, evaluate_metrics, train_loader, test_loader, 'NeuMF-pre')
+    train_single_model(combined_model, params, evaluate_metrics, train_loader, test_loader, 'ConvNCF')
     return combined_model
 
 
 def train_single_model(model, params, evaluate_metrics, train_loader, test_loader, model_name):
     loss_fn = nn.BCEWithLogitsLoss()
 
-    if model_name == 'NeuMF-pre':
-        optimizer = optim.SGD(model.parameters(), lr=params.lr)
-    else:
-        optimizer = optim.Adam(model.parameters(), lr=params.lr)
+    optimizer = optim.Adam(model.parameters(), lr=params.lr)
 
     if params.log_output:
         writer = SummaryWriter(log_dir=os.path.join(params.plot_dir, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
