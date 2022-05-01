@@ -18,7 +18,7 @@ def ndcg(gt_item, pred_items):
 def metrics(model, test_loader, top_k, device):
     HR, NDCG = [], []
 
-    print('evaluation starts here')
+    # print('evaluation starts here')
 
     for user_cat, user_num, item_cat, item_num in test_loader:
         user_cat = user_cat.to(device)
