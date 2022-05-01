@@ -7,6 +7,7 @@ import numpy as np
 
 import torch
 import torch.utils.data as data
+from torch.utils.data.sampler import RandomSampler
 import torch.backends.cudnn as cudnn
 
 import evaluate

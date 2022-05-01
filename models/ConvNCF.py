@@ -33,7 +33,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, test_loade
 
     if params.log_output:
         writer = SummaryWriter(log_dir=os.path.join(params.plot_dir, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    count, best_val_loss, best_hr, best_epoch, best_ndcg = 0, 0, -1, 0
+    count, best_val_loss, best_hr, best_epoch, best_ndcg = 0, 1e8, 0, -1, 0
 
     loss_summary = np.zeros(params.num_batches * params.epochs)
     val_loss_summary = np.zeros(params.epochs)
