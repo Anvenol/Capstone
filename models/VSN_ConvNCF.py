@@ -144,14 +144,7 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(48, 24)
         self.fc2 = nn.Linear(24, 1)
 
-        # dropout
-        self.dropout1 = nn.Dropout(params.dropout)
-        self.dropout2 = nn.Dropout(params.dropout)
-
     def forward(self, user_cat, user_num, item_cat, item_num):
-        user_embeddings = self.embed_user(self.dropout1(user))
-        item_embeddings = self.embed_item(self.dropout2(item))
-
         user_embeddings = self.embed_user.forward(variables=user_num, cat_variables=user_cat[:, 1:])[0]
         item_embeddings = self.embed_item.forward(variables=item_num, cat_variables=item_cat[:, 1].unsqueeze(-1))[0]
 
