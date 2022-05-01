@@ -3,6 +3,7 @@ import json
 import sys
 import tqdm
 import logging
+import numpy as np
 from scipy.ndimage import gaussian_filter1d
 import matplotlib
 import matplotlib.pyplot as plt
