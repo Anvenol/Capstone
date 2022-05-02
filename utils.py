@@ -184,7 +184,7 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
     sorted_user_header = user_header_list[user_top_index]
 
     ax[0, 0].set_title(plot_title[0])
-    for j in range(item_weights.shape[1]):
+    for j in range(sorted_item_weights.shape[1]):
         color = color_list[j % 6]
         line_style = all_line_style[j // 6]
         label = sorted_item_header[j]
@@ -196,7 +196,7 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
     ax[0, 0].set_ylabel('item feature importance')
 
     ax[0, 1].set_title(plot_title[1])
-    for j in range(user_weights.shape[1]):
+    for j in range(sorted_user_weights.shape[1]):
         color = color_list[j % 6]
         line_style = all_line_style[j // 6]
         label = sorted_user_header[j]
