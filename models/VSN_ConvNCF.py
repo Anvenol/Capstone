@@ -81,10 +81,9 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
         HR_summary[epoch] = HR
         NDCG_summary[epoch] = NDCG
         if params.log_output:
-            writer.add_scalars(f'{model_name}/accuracy', {'HR': np.mean(HR),
-                                                          'NDCG': np.mean(NDCG)}, epoch)
+            writer.add_scalars(f'{model_name}/accuracy', {'HR': HR, 'NDCG': NDCG}, epoch)
 
-        logger.info(f'Epoch {epoch} - val_loss: {val_loss:.3f}, HR: {np.mean(HR):.3f}\tNDCG: {np.mean(NDCG):.3f}')
+        logger.info(f'Epoch {epoch} - val_loss: {val_loss:.3f}, HR: {HR:.3f}\tNDCG: {NDCG:.3f}')
 
         if val_loss < best_val_loss:
             best_val_loss, best_hr, best_ndcg, best_epoch = val_loss, HR, NDCG, epoch

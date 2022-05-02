@@ -208,7 +208,7 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
     ax[0, 1].set_ylabel('user feature importance')
 
     if epoch > gaussian_window_size:
-        ax[1, 0].plot(x[:epoch + 1], gaussian_filter1d(metrics, gaussian_window_size),
+        ax[1, 0].plot(x[:epoch + 1], gaussian_filter1d(metrics[:epoch + 1], gaussian_window_size),
                       color=color_list[4], linestyle=all_line_style[2], label='HR')
         ax[1, 0].set_ylabel('HR')
         ax[1, 0].legend(loc='upper left')
