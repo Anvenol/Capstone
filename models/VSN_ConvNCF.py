@@ -70,10 +70,6 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
                 user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
                 prediction, user_weights, item_weights = model(user_cat, user_num, item_cat,
                                                                item_num, return_weights=True)
-                print('user_weights: ', user_weights.shape)
-                print('item_weights: ', item_weights.shape)
-                print('user_weights_all: ', user_weights_all.shape)
-                print('item_weights_all: ', item_weights_all.shape)
                 loss_val_epoch[val_count] = loss_fn(prediction, label).item()
                 user_weights_all[epoch] = user_weights.data.cpu().numpy().mean(0)
                 item_weights_all[epoch] = item_weights.data.cpu().numpy().mean(0)
@@ -97,7 +93,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
             utils.save_dict_to_json({'val_loss': val_loss, 'HR': HR, 'NDCG': NDCG},
                                     os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
 
-        if epoch % 100 == 99:
+        if epoch % 10 == 9:
             utils.plot_all_loss(loss_summary[:count], 'loss', plot_title=params.plot_title,
                                 location=os.path.join(params.model_dir, 'figures'))
             utils.plot_all_epoch(val_loss_summary[:epoch+1], HR_summary[:epoch+1], NDCG_summary[:epoch+1],
