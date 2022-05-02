@@ -1,6 +1,6 @@
 {
   "lr": 1e-3,
-  "dropout": 0.1,
+  "dropout": 0.5,
   "batch_size": 256,
   "epochs": 20,
   "num_layers": 3,

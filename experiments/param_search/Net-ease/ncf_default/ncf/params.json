@@ -1,9 +1,9 @@
 {
   "lr": 1e-3,
-  "dropout": 0.0,
-  "batch_size": 256,
+  "dropout": 0.5,
+  "batch_size": 512,
   "epochs": 20,
   "num_layers": 3,
-  "num_ng": 4,
+  "num_ng": 7,
   "factor_num": 32
 }
