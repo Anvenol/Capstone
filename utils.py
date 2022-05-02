@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 matplotlib.rcParams['savefig.dpi'] = 300  # Uncomment for higher plot resolutions
 
+
 class Params:
     """
     Class that loads hyperparameters from a json file as a dictionary (also support nested dicts).
@@ -183,24 +184,26 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
     sorted_user_header = user_header_list[user_top_index]
 
     ax[0, 0].set_title(plot_title[0])
+    print('item_weights.shape[1]: ', item_weights.shape[1])
     for j in range(item_weights.shape[1]):
         color = color_list[j % 6]
         line_style = line_style[j // 6]
         label = sorted_item_header[j]
         ax[0, 0].plot(x[:epoch + 1], gaussian_filter1d(sorted_item_weights[:epoch + 1, j],
-                                                           gaussian_window_size), color=color,
+                                                       gaussian_window_size), color=color,
                       linestyle=line_style, label=label)
     ax[0, 0].legend(loc='lower left')
     ax[0, 0].set_xlabel('epoch')
     ax[0, 0].set_ylabel('item feature importance')
 
     ax[0, 1].set_title(plot_title[1])
+    print('user_weights.shape[1]: ', user_weights.shape[1])
     for j in range(user_weights.shape[1]):
         color = color_list[j % 6]
         line_style = line_style[j // 6]
         label = sorted_user_header[j]
         ax[0, 1].plot(x[:epoch + 1], gaussian_filter1d(sorted_user_weights[:epoch + 1, j],
-                                                        gaussian_window_size), color=color,
+                                                       gaussian_window_size), color=color,
                       linestyle=line_style, label=label)
     ax[0, 1].legend(loc='lower left')
     ax[0, 1].set_xlabel('epoch')
