@@ -163,7 +163,8 @@ def plot_all_epoch(variable1, variable2, variable3, save_name, plot_title, locat
         plt.close()
 
 
-def plot_weights(item_weights, user_weights, item_header_list, user_header_list, metrics, epoch):
+def plot_weights(item_weights, user_weights, item_header_list, user_header_list, metrics, epoch,
+                 location):
     color_list = ['r', 'g', 'b', 'y', 'k', 'm']
     line_style = ['-', '--', '-.', ':']
     plot_title = ['item', 'user', 'HR']
@@ -183,9 +184,9 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
 
     ax[0, 0].set_title(plot_title[0])
     for j in range(item_weights.shape[1]):
-        color = self.color_list[j % 6]
-        line_style = self.line_style[j // 6]
-        label = sorted_item_header[i]
+        color = color_list[j % 6]
+        line_style = line_style[j // 6]
+        label = sorted_item_header[j]
         ax[0, 0].plot(x[:epoch + 1], gaussian_filter1d(sorted_item_weights[:epoch + 1, j],
                                                            gaussian_window_size), color=color,
                       linestyle=line_style, label=label)
@@ -195,9 +196,9 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
 
     ax[0, 1].set_title(plot_title[1])
     for j in range(user_weights.shape[1]):
-        color = self.color_list[j % 6]
-        line_style = self.line_style[j // 6]
-        label = sorted_user_header[i]
+        color = color_list[j % 6]
+        line_style = line_style[j // 6]
+        label = sorted_user_header[j]
         ax[0, 1].plot(x[:epoch + 1], gaussian_filter1d(sorted_user_weights[:epoch + 1, j],
                                                         gaussian_window_size), color=color,
                       linestyle=line_style, label=label)
@@ -207,9 +208,9 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
 
     if epoch > gaussian_window_size:
         ax[1, 0].plot(x[:epoch + 1], gaussian_filter1d(metrics, gaussian_window_size),
-                      color=self.color_list[4], linestyle=self.line_style[2], label='HR')
-            metrics_axis.set_ylabel('HR')
-            metrics_axis.legend(loc='upper left')
+                      color=color_list[4], linestyle=line_style[2], label='HR')
+        ax[1, 0].set_ylabel('HR')
+        ax[1, 0].legend(loc='upper left')
 
-    f.savefig(self.save_path)
+    f.savefig(os.path.join(location, 'feature_importance.png'))
     plt.close()
