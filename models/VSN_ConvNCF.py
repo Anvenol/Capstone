@@ -42,8 +42,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
 
     user_weights_all = np.zeros((params.epochs, params.user_int_num + params.user_cat_num - 1))
     item_weights_all = np.zeros((params.epochs, params.mlog_int_num + params.mlog_cat_num - 1))
-    item_header_list = np.array(['hi'] * (params.user_int_num + params.user_cat_num - 1))
-    user_header_list = np.array(['hi'] * (params.mlog_int_num + params.mlog_cat_num - 1))
+    user_header_list = np.array(['hi'] * (params.user_int_num + params.user_cat_num - 1))
+    item_header_list = np.array(['hi'] * (params.mlog_int_num + params.mlog_cat_num - 1))
 
     for epoch in trange(params.epochs):
         model.train()
