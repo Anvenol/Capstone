@@ -139,6 +139,8 @@ def load_all(params):
     train_data.dropna(axis=0, how='any', inplace=False)
     train_user_data = train_data['userId'].apply(lambda x: user_data[user_data['userId'] == x].values[0]).fillna(0)
     train_item_data = train_data['mlogId'].apply(lambda x: mlog_data[mlog_data['mlogId'] == x].values[0]).fillna(0)
+    params.user_header_list = np.array(list(train_user_data.columns))
+    params.item_header_list = np.array(list(train_item_data.columns))
     user_train = np.stack(train_user_data.values)
     item_train = np.stack(train_item_data.values)
     y_train = train_data["isClick"].values.tolist()

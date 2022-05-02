@@ -42,8 +42,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
 
     user_weights_all = np.zeros((params.epochs, params.user_int_num + params.user_cat_num - 1))
     item_weights_all = np.zeros((params.epochs, params.mlog_int_num + params.mlog_cat_num - 1))
-    user_header_list = np.array(['hi'] * (params.user_int_num + params.user_cat_num - 1))
-    item_header_list = np.array(['hi'] * (params.mlog_int_num + params.mlog_cat_num - 1))
+    user_header_list = params.user_header_list[1:]
+    item_header_list = params.item_header_list[1:]
 
     for epoch in trange(params.epochs):
         model.train()
@@ -274,7 +274,7 @@ class VSN(Module):
 
         num_embeds = [self.num_embeds[i](variables[:, i:i+1]) for i in range(self.n_vars)]
         cat_embeds = [self.cat_embeds[i](cat_variables[:, i:i+1].squeeze(1)) for i in range(self.cat_vars)]
-        all_embeds = num_embeds + cat_embeds
+        all_embeds = cat_embeds + num_embeds
         flatten = torch.cat(all_embeds, dim=-1)  # [B, d_hidden * (n_vars + cat_vars)]
         weight = self.weight_network(flatten).unsqueeze(dim=-2)  # [B, 1, n_vars + cat_vars]
         weight = torch.softmax(weight, dim=-1)
