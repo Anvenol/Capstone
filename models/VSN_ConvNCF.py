@@ -92,7 +92,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
             utils.save_dict_to_json({'val_loss': val_loss, 'HR': HR, 'NDCG': NDCG},
                                     os.path.join(params.model_dir, 'metrics_test_best_weights.json'))
 
-        if epoch % 10 == 9:
+        if epoch % 100 == 99:
             utils.plot_all_loss(loss_summary[:count], 'loss', plot_title=params.plot_title,
                                 location=os.path.join(params.model_dir, 'figures'))
             utils.plot_all_epoch(val_loss_summary[:epoch+1], HR_summary[:epoch+1], NDCG_summary[:epoch+1],

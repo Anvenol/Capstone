@@ -168,7 +168,7 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
                  location):
     color_list = ['r', 'g', 'b', 'y', 'k', 'm']
     all_line_style = ['-', '--', '-.', ':', ' ', '']
-    plot_title = ['item', 'user', 'HR']
+    plot_title = ['Item Features', 'User Features', 'HR']
     gaussian_window_size = 3
 
     x = np.arange(start=0, stop=epoch + 1)
