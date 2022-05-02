@@ -2,7 +2,7 @@
   "lr": 0.001,
   "dropout": 0.5,
   "batch_size": 512,
-  "epochs": 5000,
+  "epochs": 500,
   "num_layers": 3,
   "num_ng": 4,
   "factor_num": 32

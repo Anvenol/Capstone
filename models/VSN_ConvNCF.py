@@ -40,6 +40,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
     HR_summary = np.zeros(params.epochs)
     NDCG_summary = np.zeros(params.epochs)
 
+    user_weights = np.zeros()
+
     for epoch in trange(params.epochs):
         model.train()
         if epoch % 10 == 0:
@@ -63,7 +65,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
             loss_val_epoch = np.zeros(params.num_val_batches)
             for val_count, batch in enumerate(val_loader):
                 user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
-                prediction = model(user_cat, user_num, item_cat, item_num)
+                prediction, user_weights, item_weights = model(user_cat, user_num, item_cat,
+                                                               item_num, return_weights=True)
                 loss_val_epoch[val_count] = loss_fn(prediction, label).item()
 
             val_loss = np.mean(loss_val_epoch)
@@ -144,9 +147,11 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(48, 24)
         self.fc2 = nn.Linear(24, 1)
 
-    def forward(self, user_cat, user_num, item_cat, item_num):
-        user_embeddings = self.embed_user.forward(variables=user_num, cat_variables=user_cat[:, 1:])[0]
-        item_embeddings = self.embed_item.forward(variables=item_num, cat_variables=item_cat[:, 1].unsqueeze(-1))[0]
+    def forward(self, user_cat, user_num, item_cat, item_num, return_weights=False):
+        user_embeddings, user_weights = self.embed_user.forward(variables=user_num,
+                                                                cat_variables=user_cat[:, 1:])
+        item_embeddings, item_weights = self.embed_item.forward(variables=item_num,
+                                                                cat_variables=item_cat[:, 1].unsqueeze(-1))
 
         # outer product
         interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
@@ -160,7 +165,10 @@ class Net(nn.Module):
         prediction = self.fc1(torch.cat((feature_vec, user_embeddings, item_embeddings), dim=1))
         prediction = self.fc2(prediction).view((-1))
 
-        return prediction
+        if return_weights:
+            return prediction, user_weights, item_weights
+        else:
+            return prediction
 
 
 class LayerNorm(nn.Module):
