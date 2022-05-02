@@ -176,10 +176,10 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
     ax = f.subplots(2, 2)
 
     # sort and select top 10 features
-    item_top_index = np.argsort(item_weights[-1])[:10]
+    item_top_index = np.argsort(item_weights[-5:].sum(0))[:10]
     sorted_item_weights = item_weights[:, item_top_index]
     sorted_item_header = item_header_list[item_top_index]
-    user_top_index = np.argsort(user_weights[-1])[:10]
+    user_top_index = np.argsort(user_weights[-5:].sum(0))[:10]
     sorted_user_weights = user_weights[:, user_top_index]
     sorted_user_header = user_header_list[user_top_index]
 
@@ -209,7 +209,7 @@ def plot_weights(item_weights, user_weights, item_header_list, user_header_list,
 
     if epoch > gaussian_window_size:
         ax[1, 0].plot(x[:epoch + 1], gaussian_filter1d(metrics, gaussian_window_size),
-                      color=color_list[4], linestyle=line_style[2], label='HR')
+                      color=color_list[4], linestyle=all_line_style[2], label='HR')
         ax[1, 0].set_ylabel('HR')
         ax[1, 0].legend(loc='upper left')
 
