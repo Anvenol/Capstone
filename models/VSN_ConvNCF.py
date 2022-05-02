@@ -42,6 +42,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
 
     user_weights_all = np.zeros(params.epochs, params.user_int_num + params.user_cat_num - 1)
     item_weights_all = np.zeros(params.epochs, params.mlog_int_num + params.mlog_cat_num - 1)
+    item_header_list = ['hi'] * (params.user_int_num + params.user_cat_num - 1)
+    user_header_list = ['hi'] * (params.epochs, params.mlog_int_num + params.mlog_cat_num - 1)
 
     for epoch in trange(params.epochs):
         model.train()
@@ -101,6 +103,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
             utils.plot_all_epoch(val_loss_summary[:epoch+1], HR_summary[:epoch+1], NDCG_summary[:epoch+1],
                                  'metrics', plot_title=params.plot_title,
                                  location=os.path.join(params.model_dir, 'figures'))
+            utils.plot_weights(item_weights_all, user_weights_all, item_header_list, user_header_list,
+                               HR_summary, epoch)
         # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
