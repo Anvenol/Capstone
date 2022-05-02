@@ -107,6 +107,7 @@ def main():
 
     # Perform hypersearch over parameters listed below
     search_params = {
+        "trial": [0, 1, 2, 3],
         "num_ng": [2, 4, 7, 10]
     }
 

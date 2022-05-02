@@ -161,3 +161,35 @@ def plot_all_epoch(variable1, variable2, variable3, save_name, plot_title, locat
         ax2.set_ylabel("HR")
         f.savefig(os.path.join(location, save_name + '_summary.png'))
         plt.close()
+
+
+def plot_weights(item_weights, user_weights, header_list, metrics, epoch):
+    color_list = ['r', 'g', 'b', 'y', 'k', 'm']
+    line_style = ['-', '--', '-.', ':']
+    plot_title = ['item', 'user', 'HR']
+    gaussian_window_size = 3
+
+    x = np.arange(start=0, stop=epoch + 1)
+    f = plt.figure(figsize=(20, 20), constrained_layout=True)
+    ax = f.subplots(2, 2)
+
+    ax[0, 0].set_title(plot_title[0])
+    for j in range(var_weights[i].shape[0]):
+        color = self.color_list[j % 6]
+        line_style = self.line_style[j // 6]
+        label = self.header_list[i][self.index_list[i][j]]
+        ax[row, col].plot(x[:epoch + 1], gaussian_filter1d(item_weights[i][j, :epoch + 1],
+                                                               gaussian_window_size), color=color,
+                              linestyle=line_style, label=label)
+        if epoch > 20:
+            metrics_axis = ax[row, col].twinx()
+            metrics_axis.plot(x[20:epoch + 1], gaussian_filter1d(metrics[20:], gaussian_window_size),
+                              color=self.color_list[4], linestyle=self.line_style[2], label='Accuracy')
+            metrics_axis.set_ylabel('AGG')
+            metrics_axis.legend(loc='upper left')
+
+        ax[row, col].legend(loc='lower left')
+        ax[row, col].set_xlabel('epoch')
+        ax[row, col].set_ylabel('feature importance')
+    f.savefig(self.save_path)
+    plt.close()

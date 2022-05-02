@@ -40,7 +40,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
     HR_summary = np.zeros(params.epochs)
     NDCG_summary = np.zeros(params.epochs)
 
-    user_weights = np.zeros()
+    user_weights_all = np.zeros(params.epochs, params.user_int_num + params.user_cat_num - 1)
+    item_weights_all = np.zeros(params.epochs, params.mlog_int_num + params.mlog_cat_num - 1)
 
     for epoch in trange(params.epochs):
         model.train()
@@ -67,7 +68,13 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
                 user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
                 prediction, user_weights, item_weights = model(user_cat, user_num, item_cat,
                                                                item_num, return_weights=True)
+                print('user_weights: ', user_weights.shape)
+                print('item_weights: ', item_weights.shape)
+                print('user_weights_all: ', user_weights_all.shape)
+                print('item_weights_all: ', item_weights_all.shape)
                 loss_val_epoch[val_count] = loss_fn(prediction, label).item()
+                user_weights_all[epoch] = user_weights.data.cpu().numpy().mean(0)
+                item_weights_all[epoch] = item_weights.data.cpu().numpy().mean(0)
 
             val_loss = np.mean(loss_val_epoch)
             val_loss_summary[epoch] = val_loss
