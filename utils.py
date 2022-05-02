@@ -166,7 +166,7 @@ def plot_all_epoch(variable1, variable2, variable3, save_name, plot_title, locat
 def plot_weights(item_weights, user_weights, item_header_list, user_header_list, metrics, epoch,
                  location):
     color_list = ['r', 'g', 'b', 'y', 'k', 'm']
-    line_style = ['-', '--', '-.', ':']
+    line_style = ['-', '--', '-.', ':', ' ', '']
     plot_title = ['item', 'user', 'HR']
     gaussian_window_size = 3
 
