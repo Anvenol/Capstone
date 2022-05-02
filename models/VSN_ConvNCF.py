@@ -104,7 +104,7 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
                                  'metrics', plot_title=params.plot_title,
                                  location=os.path.join(params.model_dir, 'figures'))
             utils.plot_weights(item_weights_all, user_weights_all, item_header_list, user_header_list,
-                               HR_summary, epoch)
+                               HR_summary, epoch, location=os.path.join(params.model_dir, 'figures'))
         # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
@@ -117,10 +117,6 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.dropout = params.dropout
         self.model = model
-        factor_num = params.factor_num
-        num_layers = params.num_layers
-        user_num = params.user_num
-        mlog_num = params.mlog_num
         user_int_num = params.user_int_num
         mlog_int_num = params.mlog_int_num
         user_cat_num = params.user_cat_num
