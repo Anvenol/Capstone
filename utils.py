@@ -9,7 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 matplotlib.use('Agg')
-matplotlib.rcParams['savefig.dpi'] = 300  # Uncomment for higher plot resolutions
+matplotlib.rcParams['savefig.dpi'] = 100  # Uncomment for higher plot resolutions
 
 
 class Params:
