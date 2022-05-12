@@ -14,15 +14,15 @@ from typing import List, Tuple
 
 import utils
 
-logger = logging.getLogger('RMD.ConvNCF_nores')
+logger = logging.getLogger('RMD.ORCF_VSN')
 
 
 def train(params, evaluate_metrics, train_loader, val_loader, test_loader):
-    combined_model = Net(params, model='ConvNCF')
+    combined_model = Net(params, model='ORCF_VSN')
     if torch.cuda.is_available():
         combined_model.cuda()
     logger.info('Training model...')
-    train_single_model(combined_model, params, evaluate_metrics, train_loader, val_loader, test_loader, 'ConvNCF_nores')
+    train_single_model(combined_model, params, evaluate_metrics, train_loader, val_loader, test_loader, 'ORCF_VSN')
     return combined_model
 
 
@@ -39,6 +39,11 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
     val_loss_summary = np.zeros(params.epochs)
     HR_summary = np.zeros(params.epochs)
     NDCG_summary = np.zeros(params.epochs)
+
+    user_weights_all = np.zeros((params.epochs, params.user_int_num + params.user_cat_num - 1))
+    item_weights_all = np.zeros((params.epochs, params.mlog_int_num + params.mlog_cat_num - 1))
+    user_header_list = params.user_header_list[1:]
+    item_header_list = params.item_header_list[1:]
 
     for epoch in trange(params.epochs):
         model.train()
@@ -63,8 +68,11 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
             loss_val_epoch = np.zeros(params.num_val_batches)
             for val_count, batch in enumerate(val_loader):
                 user_cat, user_num, item_cat, item_num, label = map(lambda x: x.to(params.device), batch)
-                prediction = model(user_cat, user_num, item_cat, item_num)
+                prediction, user_weights, item_weights = model(user_cat, user_num, item_cat,
+                                                               item_num, return_weights=True)
                 loss_val_epoch[val_count] = loss_fn(prediction, label).item()
+                user_weights_all[epoch] = user_weights.data.cpu().numpy().mean(0)
+                item_weights_all[epoch] = item_weights.data.cpu().numpy().mean(0)
 
             val_loss = np.mean(loss_val_epoch)
             val_loss_summary[epoch] = val_loss
@@ -90,6 +98,8 @@ def train_single_model(model, params, evaluate_metrics, train_loader, val_loader
             utils.plot_all_epoch(val_loss_summary[:epoch + 1], HR_summary[:epoch + 1], NDCG_summary[:epoch + 1],
                                  'metrics', plot_title=params.plot_title,
                                  location=os.path.join(params.model_dir, 'figures'))
+            utils.plot_weights(item_weights_all, user_weights_all, item_header_list, user_header_list,
+                               HR_summary, epoch, location=os.path.join(params.model_dir, 'figures'))
         # torch.save(model, os.path.join(params.model_dir, f'{model_name}_epoch_{epoch}.pth'))
 
     if params.log_output:
@@ -104,20 +114,16 @@ class Net(nn.Module):
         self.model = model
         user_int_num = params.user_int_num
         mlog_int_num = params.mlog_int_num
+        user_cat_num = params.user_cat_num
+        mlog_cat_num = params.mlog_cat_num
         user_cat_dims = params.user_cat_dims
         mlog_cat_dims = params.mlog_cat_dims
         self.embedding_size = 16
 
-        # self.user_embedding1 = nn.Embedding(user_cat_dims[0], 42)
-        self.user_embedding2 = nn.Embedding(user_cat_dims[1], 7)
-        self.user_embedding3 = nn.Embedding(user_cat_dims[2], 5)
-        self.user_embedding4 = nn.Linear(user_int_num, 10)
-        # self.mlog_embedding1 = nn.Embedding(mlog_cat_dims[0], 36)
-        self.mlog_embedding2 = nn.Linear(mlog_int_num, 20)
-        self.mlog_embedding3 = nn.Embedding(mlog_cat_dims[1], 5)
-
-        self.embed_user = nn.Linear(7 + 5 + 10, self.embedding_size)
-        self.embed_item = nn.Linear(20 + 5, self.embedding_size)
+        self.embed_user = VSN(d_hidden=self.embedding_size, n_vars=user_int_num, cat_vars=user_cat_num - 1,
+                              cat_dims=user_cat_dims[1:])
+        self.embed_item = VSN(d_hidden=self.embedding_size, n_vars=mlog_int_num, cat_vars=mlog_cat_num - 1,
+                              cat_dims=mlog_cat_dims[1:])
 
         # cnn setting
         self.channel_size = 16
@@ -140,31 +146,14 @@ class Net(nn.Module):
         )
 
         # fully-connected layer, used to predict
-        self.fc1 = nn.Linear(16, 8)
-        self.fc2 = nn.Linear(8, 1)
+        self.fc1 = nn.Linear(48, 24)
+        self.fc2 = nn.Linear(24, 1)
 
-        # dropout
-        self.dropout1 = nn.Dropout(params.dropout)
-        self.dropout2 = nn.Dropout(params.dropout)
-
-    def forward(self, user_cat, user_num, item_cat, item_num):
-        """
-        for i in range(numerical_feature_start):
-          embed_userid = self.user_embedding1(user_cat[:, i])
-        """
-        # embed_userid = self.user_embedding1(user_cat[:, 0])
-        embed_province = self.user_embedding2(user_cat[:, 1])
-        embed_gender = self.user_embedding3(user_cat[:, 2])
-        embed_user_linear = self.user_embedding4(user_num)
-        user = torch.cat((embed_province, embed_gender, embed_user_linear), dim=1)
-
-        # embed_mlogid = self.mlog_embedding1(item_cat[:,0])
-        embed_mloggender = self.mlog_embedding3(item_cat[:, 1])
-        embed_mlog_linear = self.mlog_embedding2(item_num)
-        item = torch.cat((embed_mloggender, embed_mlog_linear), dim=1)
-
-        user_embeddings = self.embed_user(self.dropout1(user))
-        item_embeddings = self.embed_item(self.dropout2(item))
+    def forward(self, user_cat, user_num, item_cat, item_num, return_weights=False):
+        user_embeddings, user_weights = self.embed_user.forward(variables=user_num,
+                                                                cat_variables=user_cat[:, 1:])
+        item_embeddings, item_weights = self.embed_item.forward(variables=item_num,
+                                                                cat_variables=item_cat[:, 1].unsqueeze(-1))
 
         # outer product
         interaction_map = torch.bmm(user_embeddings.unsqueeze(2), item_embeddings.unsqueeze(1))
@@ -175,7 +164,85 @@ class Net(nn.Module):
         feature_vec = feature_map.view((-1, self.channel_size))
 
         # fc
-        prediction = self.fc1(feature_vec)
+        prediction = self.fc1(torch.cat((feature_vec, user_embeddings, item_embeddings), dim=1))
         prediction = self.fc2(prediction).view((-1))
 
-        return prediction
+        if return_weights:
+            return prediction, user_weights, item_weights
+        else:
+            return prediction
+
+
+class LayerNorm(nn.Module):
+    def __init__(self, hidden_size, eps=1e-6):
+        """ Construct a layernorm module in the T5 style
+            No bias and no substraction of mean.
+        """
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.variance_epsilon = eps
+        self.weight.data.fill_(1.0)
+
+    def forward(self, x):
+        # layer norm should always be calculated in float32
+        variance = x.to(torch.float32).pow(2).mean(-1, keepdim=True)
+        x = x / torch.sqrt(variance + self.variance_epsilon)
+
+        if self.weight.dtype == torch.float16:
+            x = x.to(torch.float16)
+        return self.weight * x
+
+
+class GRN(Module):
+    def __init__(self, d_input, d_hidden, dropout, d_output=None):
+        super(GRN, self).__init__()
+        if d_output is None:
+            d_output = d_hidden
+            self.skip = nn.Identity()
+        else:
+            self.skip = nn.Linear(d_input, d_output)
+        self.linear_elu = nn.Linear(d_input, d_hidden)
+        self.linear_pre_glu = nn.Linear(d_hidden, d_hidden)
+        self.dropout = nn.Dropout(dropout)
+        self.linear_post_glu = nn.Linear(d_hidden, 2 * d_output)
+        self.layer_norm = LayerNorm(d_output, eps=1e-6)
+
+    def forward(self, x):
+        together = x
+        post_elu = F.elu(self.linear_elu(together))
+        pre_glu = self.dropout(self.linear_pre_glu(post_elu))
+        return self.layer_norm(F.glu(self.linear_post_glu(pre_glu)) + self.skip(x))
+
+
+class VSN(Module):
+    def __init__(self, d_hidden: int, n_vars: int, cat_vars: int, cat_dims: List[int], dropout: float = 0.0):
+        super(VSN, self).__init__()
+        self.d_hidden = d_hidden
+        self.n_vars = n_vars  # number of numerical features
+        self.cat_vars = cat_vars  # number of categorical features
+        self.num_embeds = nn.ModuleList(
+            nn.Linear(1, self.d_hidden) for _ in range(self.n_vars)
+        )
+        self.cat_embeds = nn.ModuleList(
+            nn.Embedding(cat_dims[i], self.d_hidden) for i in range(self.cat_vars)
+        )
+        self.weight_network = GRN(d_input=self.d_hidden * (self.n_vars + self.cat_vars),
+                                  d_hidden=self.d_hidden, dropout=dropout, d_output=self.n_vars + self.cat_vars)
+        self.variable_network = nn.ModuleList(
+            GRN(d_input=self.d_hidden, d_hidden=self.d_hidden, dropout=dropout) for _ in range(self.n_vars + self.cat_vars)
+        )
+
+    def forward(self, variables, cat_variables):
+        num_embeds = [self.num_embeds[i](variables[:, i:i + 1]) for i in range(self.n_vars)]
+        cat_embeds = [self.cat_embeds[i](cat_variables[:, i:i + 1].squeeze(1)) for i in range(self.cat_vars)]
+        all_embeds = cat_embeds + num_embeds
+        flatten = torch.cat(all_embeds, dim=-1)  # [B, d_hidden * (n_vars + cat_vars)]
+        weight = self.weight_network(flatten).unsqueeze(dim=-2)  # [B, 1, n_vars + cat_vars]
+        weight = torch.softmax(weight, dim=-1)
+        # [B, d_hidden, n_vars + cat_vars]
+        var_encodings = torch.stack(
+            tensors=[net(v) for v, net in zip(all_embeds, self.variable_network)],
+            dim=-1
+        )
+        var_encodings = torch.sum(var_encodings * weight, dim=-1)
+        return var_encodings, weight

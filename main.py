@@ -17,7 +17,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='Net-ease', help='Name of the dataset')
     parser.add_argument('--dataloader', default='ncf_default', help='Which data loader to use')
-    parser.add_argument('--model', default='ConvNCF', choices=utils.model_list(), help='Which model to use')
+    parser.add_argument('--model', default='ORCF', choices=utils.model_list(), help='Which model to use')
     parser.add_argument('--model-dir', default='base_model',
                         help='Directory containing params.json, and training results')
     parser.add_argument('--param-set', default=None, help='Set of model parameters created for hypersearch')

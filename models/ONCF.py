@@ -14,15 +14,15 @@ from typing import List, Tuple
 
 import utils
 
-logger = logging.getLogger('RMD.ConvNCF')
+logger = logging.getLogger('RMD.ONCF')
 
 
 def train(params, evaluate_metrics, train_loader, val_loader, test_loader):
-    combined_model = Net(params, model='ConvNCF')
+    combined_model = Net(params, model='ONCF')
     if torch.cuda.is_available():
         combined_model.cuda()
     logger.info('Training model...')
-    train_single_model(combined_model, params, evaluate_metrics, train_loader, val_loader, test_loader, 'ConvNCF')
+    train_single_model(combined_model, params, evaluate_metrics, train_loader, val_loader, test_loader, 'ONCF')
     return combined_model
 
 
@@ -102,14 +102,8 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.dropout = params.dropout
         self.model = model
-        factor_num = params.factor_num
-        num_layers = params.num_layers
-        user_num = params.user_num
-        mlog_num = params.mlog_num
         user_int_num = params.user_int_num
         mlog_int_num = params.mlog_int_num
-        user_cat_num = params.user_cat_num
-        mlog_cat_num = params.mlog_cat_num
         user_cat_dims = params.user_cat_dims
         mlog_cat_dims = params.mlog_cat_dims
         self.embedding_size = 16
@@ -146,8 +140,8 @@ class Net(nn.Module):
         )
 
         # fully-connected layer, used to predict
-        self.fc1 = nn.Linear(48, 24)
-        self.fc2 = nn.Linear(24, 1)
+        self.fc1 = nn.Linear(16, 8)
+        self.fc2 = nn.Linear(8, 1)
 
         # dropout
         self.dropout1 = nn.Dropout(params.dropout)
@@ -181,7 +175,7 @@ class Net(nn.Module):
         feature_vec = feature_map.view((-1, self.channel_size))
 
         # fc
-        prediction = self.fc1(torch.cat((feature_vec, user_embeddings, item_embeddings), dim=1))
+        prediction = self.fc1(feature_vec)
         prediction = self.fc2(prediction).view((-1))
 
         return prediction

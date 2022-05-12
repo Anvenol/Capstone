@@ -85,7 +85,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default='Net-ease', help='Name of the dataset')
     parser.add_argument('--dataloader', default='ncf_default', help='Which data loader to use')
-    parser.add_argument('--model', default='ConvNCF', choices=utils.model_list(), help='Which model to use')
+    parser.add_argument('--model', default='ORCF', choices=utils.model_list(), help='Which model to use')
     parser.add_argument('--model-dir', default='param_search',
                         help='Directory containing params.json, and training results')
     parser.add_argument('--gpu-ids', nargs='+', default=[0], type=int, help='GPU ids')
